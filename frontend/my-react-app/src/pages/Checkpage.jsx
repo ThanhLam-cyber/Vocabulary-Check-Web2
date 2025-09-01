@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom"
 import { ArrowLeft, CheckCircle, XCircle, RotateCcw, Play, Trophy, BookOpen, Mic, MicOff, Volume2, RefreshCw } from "lucide-react"
 import { collection, getDocs } from "firebase/firestore"
 import { db } from "../firebase/config.js"
+import API_ENDPOINTS from "../config/api.js"
 
 export default function CheckPage() {
   const [vocabList, setVocabList] = useState([])
@@ -242,7 +243,7 @@ export default function CheckPage() {
       const formData = new FormData()
       formData.append("audio", audioBlob, "chunk.webm")
 
-      const response = await fetch("http://localhost:4000/api/realtime-transcribe", {
+              const response = await fetch(API_ENDPOINTS.realtimeTranscribe, {
         method: "POST",
         body: formData,
       })
@@ -470,7 +471,7 @@ export default function CheckPage() {
       formData.append("audio", audioBlob, "pronunciation.webm")
       formData.append("transcript", currentQuestion.answer)
 
-      const response = await fetch("http://localhost:4000/api/pronunciation-assess", {
+      const response = await fetch(API_ENDPOINTS.pronunciationAssess, {
         method: "POST",
         body: formData,
       })
@@ -537,7 +538,7 @@ export default function CheckPage() {
       setIsGeneratingSentence(true)
       setNotification({ type: "info", message: "Đang tạo đoạn văn luyện tập..." })
       
-      const response = await fetch("http://localhost:4000/api/generate-practice-sentence", {
+      const response = await fetch(API_ENDPOINTS.generatePracticeSentence, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

@@ -11,7 +11,7 @@ const { AssemblyAI } = require('assemblyai');
 require('dotenv').config(); // Thêm dòng này để load biến môi trường từ file .env
 
 const app = express();
-const port = 4000; // Changed to 4000 to match frontend expectation
+const port = process.env.PORT || 4000; // Use Render's PORT or fallback to 4000
 
 // Initialize OpenAI
 const openai = new OpenAI({
@@ -54,7 +54,8 @@ app.use(cors({
     'http://localhost:3000',
     'http://localhost:5173', 
     'https://vocabulary-check-web-b2nu-kxjuzujz9.vercel.app',
-    'https://vocabulary-check-web.vercel.app'
+    'https://vocabulary-check-web.vercel.app',
+    'https://vocabulary-check-web.onrender.com'
   ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -1128,18 +1129,29 @@ app.get('/api/health', (req, res) => {
   const healthResponse = { 
     status: 'OK', 
     message: 'Pronunciation assessment service is running',
-    timestamp: new Date().toISOString()
+    server: 'https://vocabulary-check-web.onrender.com',
+    timestamp: new Date().toISOString(),
+    endpoints: [
+      '/api/assemblyai-transcribe',
+      '/api/pronunciation-assess', 
+      '/api/realtime-transcribe',
+      '/api/rapid-asr',
+      '/api/generate-practice-sentence',
+      '/api/health'
+    ]
   };
   console.log('Health check response:', healthResponse);
   res.json(healthResponse);
 });
 
 app.listen(port, () => {
-  console.log(`Server đang chạy tại http://localhost:${port}`);
+  console.log(`Server đang chạy tại port ${port}`);
+  console.log(`Server URL: https://vocabulary-check-web.onrender.com`);
   console.log('Available endpoints:');
   console.log('- POST /api/assemblyai-transcribe - AssemblyAI audio transcription (Node.js SDK)');
   console.log('- POST /api/pronunciation-assess - AssemblyAI + OpenAI pronunciation assessment');
   console.log('- POST /api/realtime-transcribe - Real-time audio transcription with AssemblyAI');
   console.log('- POST /api/rapid-asr - RapidAPI ASR transcription for recorded audio');
+  console.log('- POST /api/generate-practice-sentence - Generate practice sentences');
   console.log('- GET /api/health - Health check');
 });
