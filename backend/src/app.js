@@ -50,7 +50,17 @@ const upload = multer({
 
 // Middleware
 app.use(bodyParser.json());
-app.use(cors()); // Cho phép CORS để frontend có thể gọi API từ domain khác
+app.use(cors({
+  origin: [
+    'http://localhost:3000',
+    'http://localhost:5173', 
+    'https://vocabulary-check-web-b2nu-kxjuzujz9.vercel.app',
+    'https://vocabulary-check-web.vercel.app'
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-rapidapi-key', 'x-rapidapi-host']
+}));
 
 // AssemblyAI transcription function using Node.js SDK
 async function transcribeWithAssemblyAI(audioFilePath) {
