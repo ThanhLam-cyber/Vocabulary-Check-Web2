@@ -1,0 +1,256 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom CSS optimizations */
+@layer base {
+  /* Optimize font loading */
+  html {
+    font-display: swap;
+  }
+  
+  /* Reduce layout shift */
+  body {
+    margin: 0;
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+      'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+      sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+@layer components {
+  /* Custom component styles */
+  .btn-primary {
+    @apply bg-gradient-to-r from-emerald-500 to-emerald-600 text-white px-4 py-2 rounded-xl hover:from-emerald-600 hover:to-emerald-700 transition-all duration-300 font-semibold shadow-lg hover:shadow-xl;
+  }
+  
+  .btn-secondary {
+    @apply bg-gradient-to-r from-teal-500 to-teal-600 text-white px-4 py-2 rounded-xl hover:from-teal-600 hover:to-teal-700 transition-all duration-300 font-semibold shadow-lg hover:shadow-xl;
+  }
+  
+  .card {
+    @apply bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 border border-white/20;
+  }
+  
+  .input-field {
+    @apply w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-emerald-100 focus:border-emerald-400 transition-all duration-300 bg-white/70 backdrop-blur-sm text-gray-800 placeholder-gray-400;
+  }
+}
+
+@layer utilities {
+  /* Custom utilities */
+  .text-gradient {
+    @apply bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent;
+  }
+  
+  .bg-gradient-primary {
+    @apply bg-gradient-to-br from-slate-50 via-white to-slate-100;
+  }
+  
+  /* Ensure form is always visible */
+  .form-container {
+    @apply relative z-[9998];
+  }
+  
+  .form-content {
+    @apply relative z-[9999];
+  }
+  
+  /* Prevent external elements from covering the form */
+  .form-overlay-protection {
+    @apply relative z-[10000];
+  }
+  
+  /* Force form to always be on top */
+  .form-container {
+    position: relative !important;
+    z-index: 9998 !important;
+  }
+  
+  /* Ensure all form elements are visible */
+  .form-content {
+    position: relative !important;
+    z-index: 9999 !important;
+  }
+  
+  /* Override any external z-index */
+  .form-overlay-protection {
+    position: relative !important;
+    z-index: 10000 !important;
+  }
+}
+
+/* Add this at the end of the file to fix header text overlap issues */
+
+/* Ensure header text is always visible and not overlapped */
+.header-text-container {
+  position: relative;
+  z-index: 20;
+  overflow: hidden;
+}
+
+.header-text-container h1,
+.header-text-container p {
+  position: relative;
+  z-index: 21;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Remove any potential overlapping elements */
+.header-container {
+  position: relative;
+  z-index: 10;
+}
+
+.header-container::before,
+.header-container::after {
+  display: none !important;
+}
+
+/* Ensure no background elements overlap text */
+.bg-gradient-to-br,
+.bg-gradient-to-r,
+.bg-gradient-to-tr {
+  z-index: 1;
+}
+
+/* Force text to be on top */
+.text-transparent {
+  position: relative;
+  z-index: 25;
+}
+
+/* Remove any potential progress bars or decorative elements that might overlap */
+.progress-bar,
+.decorative-bar,
+.bg-green-500,
+.bg-emerald-500 {
+  display: none !important;
+}
+
+/* Additional fixes for text overlap */
+.header-container * {
+  position: relative;
+  z-index: 15;
+}
+
+.header-text-container * {
+  position: relative;
+  z-index: 30;
+}
+
+/* Ensure text is always visible */
+h1, p {
+  position: relative;
+  z-index: 25;
+}
+
+/* Remove any potential overlapping backgrounds */
+.bg-white\/80,
+.bg-white\/90 {
+  position: relative;
+  z-index: 5;
+}
+
+/* Force text containers to be on top */
+.flex-1 {
+  position: relative;
+  z-index: 20;
+}
+
+/* Ensure no elements can overlap text */
+* {
+  pointer-events: auto;
+}
+
+/* Remove any potential decorative elements */
+.absolute {
+  z-index: 1;
+}
+
+/* Force text to be visible */
+.text-transparent {
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  position: relative;
+  z-index: 30;
+}
+
+/* Additional fixes for text overlap - ensure no elements can overlap text */
+.header-container {
+  isolation: isolate;
+}
+
+.header-text-container {
+  isolation: isolate;
+  position: relative;
+  z-index: 50;
+}
+
+/* Ensure text is always on top */
+.header-text-container h1,
+.header-text-container p {
+  position: relative;
+  z-index: 51;
+  isolation: isolate;
+}
+
+/* Remove any potential overlapping elements */
+.header-container *:not(.header-text-container *) {
+  z-index: 1;
+}
+
+/* Force text to be visible and not overlapped */
+.text-transparent {
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  position: relative;
+  z-index: 60;
+  isolation: isolate;
+}
+
+/* Final fix - ensure no elements can overlap text in headers */
+.header-container {
+  isolation: isolate;
+  position: relative;
+  z-index: 10;
+}
+
+.header-text-container {
+  isolation: isolate;
+  position: relative;
+  z-index: 100;
+  pointer-events: none;
+}
+
+.header-text-container h1,
+.header-text-container p {
+  position: relative;
+  z-index: 101;
+  isolation: isolate;
+  pointer-events: auto;
+}
+
+/* Remove any potential overlapping elements */
+.header-container *:not(.header-text-container *) {
+  z-index: 1;
+  pointer-events: auto;
+}
+
+/* Ensure text is always visible */
+.text-transparent {
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  position: relative;
+  z-index: 200;
+  isolation: isolate;
+  pointer-events: auto;
+}
