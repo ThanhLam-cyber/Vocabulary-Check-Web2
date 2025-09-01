@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import './index.css'
 import App from './App.jsx'
 import './App.css'
+import ErrorBoundary from './components/ErrorBoundary.jsx'
 
 // Lazy load pages để giảm initial bundle size
 const ListPage = lazy(() => import('./pages/ListPage.jsx'))
@@ -18,14 +19,16 @@ const LoadingSpinner = () => (
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <BrowserRouter>
-      <Suspense fallback={<LoadingSpinner />}>
-        <Routes>
-          <Route path="/" element={<App />} />
-          <Route path="/list" element={<ListPage />} />
-          <Route path="/check" element={<CheckPage />} />
-        </Routes>
-      </Suspense>
-    </BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <Suspense fallback={<LoadingSpinner />}>
+          <Routes>
+            <Route path="/" element={<App />} />
+            <Route path="/list" element={<ListPage />} />
+            <Route path="/check" element={<CheckPage />} />
+          </Routes>
+        </Suspense>
+      </BrowserRouter>
+    </ErrorBoundary>
   </React.StrictMode>
 )

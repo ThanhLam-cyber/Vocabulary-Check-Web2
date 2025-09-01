@@ -57,7 +57,10 @@ export default function ListPage() {
       const vocabDocRef = doc(db, "vocabulary", id)
       await deleteDoc(vocabDocRef)
       setNotification({ type: "success", message: "Xóa từ vựng thành công!" })
-      fetchVocabList()
+      
+      // Update local state immediately instead of refetching
+      setVocabList(prev => prev.filter(vocab => vocab._id !== id))
+      
       setShowDeleteModal(false)
       setDeleteTarget(null)
     } catch (error) {
@@ -144,6 +147,8 @@ export default function ListPage() {
 
   // Filter and search vocabulary
   const filteredVocabList = vocabList.filter((vocab) => {
+    if (!vocab || !vocab.english || !vocab.vietnamese) return false;
+    
     const matchesSearch = 
       vocab.english?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       vocab.vietnamese?.toLowerCase().includes(searchTerm.toLowerCase()) ||

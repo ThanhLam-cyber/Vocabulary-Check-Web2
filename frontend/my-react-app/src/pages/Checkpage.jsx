@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react"
 import { useNavigate } from "react-router-dom"
-import { ArrowLeft, CheckCircle, XCircle, RotateCcw, Play, Trophy, BookOpen, Mic, MicOff, Volume2, RefreshCw } from "lucide-react"
+import { ArrowLeft, CheckCircle, XCircle, RotateCcw, Play, Trophy, BookOpen, Mic, MicOff, Volume2, RefreshCw, Lightbulb, Star } from "lucide-react"
 import { collection, getDocs } from "firebase/firestore"
 import { db } from "../firebase/config.js"
 import API_ENDPOINTS from "../config/api.js"
@@ -315,8 +315,6 @@ export default function CheckPage() {
       mediaRecorderRef.current.ondataavailable = e => {
         if (e.data.size > 0) {
           audioChunksRef.current.push(e.data)
-          
-          // If trình duyệt không hỗ trợ Web Speech API, không gửi lên backend nữa
         }
       }
 
@@ -353,13 +351,12 @@ export default function CheckPage() {
         }
       }
 
-      mediaRecorderRef.current.start(500) // Start recording with 500ms timeslice for real-time processing
+      mediaRecorderRef.current.start(500)
       setRecording(true)
       setMicrophonePermission('granted')
       setNotification({ type: "success", message: "Bắt đầu ghi âm phát âm..." })
 
       if (useNativeASR) {
-        // Start in-browser speech recognition for immediate on-screen text
         try {
           const recognition = new SpeechRecognitionCtor()
           recognition.interimResults = true
@@ -371,7 +368,6 @@ export default function CheckPage() {
           recognition.onresult = (event) => {
             let interim = ''
             let finals = ''
-            // Rebuild display text from current session results to avoid duplication
             for (let i = 0; i < event.results.length; i++) {
               const transcript = event.results[i][0].transcript
               if (event.results[i].isFinal) {
@@ -389,7 +385,6 @@ export default function CheckPage() {
           }
 
           recognition.onend = () => {
-            // Auto-restart while still recording for continuous updates
             if (recording) {
               try { recognition.start() } catch (_) {}
             }
@@ -407,7 +402,6 @@ export default function CheckPage() {
     } catch (error) {
       console.error("Lỗi khi bắt đầu ghi âm:", error)
       
-      // Handle specific error types
       if (error.name === 'NotAllowedError') {
         setMicrophonePermission('denied')
         setNotification({ 
@@ -439,13 +433,11 @@ export default function CheckPage() {
       setRecording(false)
       setNotification({ type: "success", message: "Đã dừng ghi âm. Đang phân tích phát âm..." })
       
-      // Clear transcription interval
       if (transcriptionIntervalRef.current) {
         clearInterval(transcriptionIntervalRef.current)
         transcriptionIntervalRef.current = null
       }
 
-      // Ensure Web Speech recognition is stopped
       if (recognitionRef.current) {
         try {
           recognitionRef.current.onend = null
@@ -456,8 +448,6 @@ export default function CheckPage() {
         recognitionRef.current = null
       }
       setIsTranscribing(false)
-      
-      // The stream cleanup is handled in the onstop callback
     }
   }
 
@@ -501,7 +491,6 @@ export default function CheckPage() {
           message: "Phân tích phát âm hoàn tất!" 
         })
       } else {
-        // Fallback to local assessment
         const localAssessment = computeLocalAssessment(realTimeText, currentQuestion.answer)
         setPronunciationFeedback({
           feedback: localAssessment.feedback,
@@ -516,7 +505,6 @@ export default function CheckPage() {
     } catch (error) {
       console.error("Lỗi khi phân tích phát âm:", error)
       
-      // Fallback to local assessment
       const localAssessment = computeLocalAssessment(realTimeText, currentQuestion.answer)
       setPronunciationFeedback({
         feedback: localAssessment.feedback,
@@ -597,7 +585,6 @@ export default function CheckPage() {
       if (transcriptionIntervalRef.current) {
         clearInterval(transcriptionIntervalRef.current)
       }
-      // Cleanup Web Speech recognition on unmount
       if (recognitionRef.current) {
         try {
           recognitionRef.current.onend = null
@@ -609,223 +596,284 @@ export default function CheckPage() {
   }, [])
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
       {/* Background decorative elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-20 -right-20 sm:-top-40 sm:-right-40 w-40 h-40 sm:w-80 sm:h-80 bg-gradient-to-br from-purple-200/30 to-pink-200/30 rounded-full blur-2xl sm:blur-3xl"></div>
-        <div className="absolute -bottom-20 -left-20 sm:-bottom-40 sm:-left-40 w-40 h-40 sm:w-80 sm:h-80 bg-gradient-to-tr from-blue-200/30 to-indigo-200/30 rounded-full blur-2xl sm:blur-3xl"></div>
+        <div className="absolute top-20 right-20 w-72 h-72 bg-gradient-to-br from-blue-200/20 to-indigo-300/20 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-20 left-20 w-96 h-96 bg-gradient-to-tr from-purple-200/20 to-pink-300/20 rounded-full blur-3xl animate-pulse" style={{animationDelay: '2s'}}></div>
       </div>
 
-      <div className="relative z-10 container mx-auto px-4 py-6 sm:py-8">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6 sm:mb-8 relative header-container">
-          <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
-            <button
-              onClick={() => navigate("/")}
-              className="p-2 sm:p-3 bg-white/80 backdrop-blur-sm rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 flex-shrink-0"
-            >
-              <ArrowLeft className="w-5 h-5 sm:w-6 sm:h-6 text-gray-700" />
-            </button>
-            <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
-              <div className="p-2 sm:p-3 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl shadow-lg flex-shrink-0">
-                <Trophy className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+      <div className="relative z-10">
+        {/* Modern Header */}
+        <div className="bg-white/70 backdrop-blur-xl border-b border-gray-200/50 sticky top-0 z-20">
+          <div className="container mx-auto px-6 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={() => navigate("/")}
+                  className="p-3 bg-white/80 backdrop-blur-sm rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 group"
+                >
+                  <ArrowLeft className="w-5 h-5 text-gray-700 group-hover:text-indigo-600 transition-colors" />
+                </button>
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full shadow-lg">
+                    <Trophy className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <h1 className="text-xl font-bold text-gray-800">
+                      Kiểm tra từ vựng
+                    </h1>
+                    <p className="text-sm text-gray-500">
+                      {quizStarted ? `Điểm: ${score}/${totalQuestions}` : `${vocabList.length} từ có sẵn`}
+                    </p>
+                  </div>
+                </div>
               </div>
-              <div className="flex-1 min-w-0 relative z-10 header-text-container">
-                <h1 className="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent truncate">
-                  Kiểm Tra Từ Vựng
-                </h1>
-                <p className="text-gray-600 text-xs sm:text-sm truncate">
-                  {quizStarted ? `Điểm: ${score}/${totalQuestions}` : `Có ${vocabList.length} từ để kiểm tra`}
-                </p>
-              </div>
+
+              {/* Score Display */}
+              {quizStarted && (
+                <div className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white px-6 py-2 rounded-full shadow-lg">
+                  <div className="flex items-center gap-2">
+                    <Star className="w-4 h-4" />
+                    <span className="font-bold">{score}/{totalQuestions}</span>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
 
-        {/* Loading State */}
-        {loading && (
-          <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500"></div>
-          </div>
-        )}
-
-        {/* Main Content */}
-        {!loading && (
-          <div className="space-y-6">
-            {/* Start Quiz Section */}
-            {!quizStarted && (
-              <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 sm:p-8 shadow-lg">
-                <div className="text-center space-y-6">
-                  <div className="w-20 h-20 bg-gradient-to-br from-purple-500 to-pink-600 rounded-full flex items-center justify-center mx-auto shadow-lg">
-                    <BookOpen className="w-10 h-10 text-white" />
-                  </div>
-                  
-                  <div>
-                    <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2">
-                      Sẵn sàng kiểm tra?
-                    </h2>
-                    <p className="text-gray-600 text-sm sm:text-base">
-                      Kiểm tra kiến thức từ vựng của bạn với {vocabList.length} từ có sẵn
-                    </p>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
-                    <div className="bg-purple-50 rounded-xl p-4">
-                      <div className="text-purple-600 font-semibold">Từ vựng</div>
-                      <div className="text-2xl font-bold text-purple-700">{vocabList.length}</div>
-                    </div>
-                    <div className="bg-pink-50 rounded-xl p-4">
-                      <div className="text-pink-600 font-semibold">Câu hỏi</div>
-                      <div className="text-2xl font-bold text-pink-700">Ngẫu nhiên</div>
-                    </div>
-                    <div className="bg-blue-50 rounded-xl p-4">
-                      <div className="text-blue-600 font-semibold">Thời gian</div>
-                      <div className="text-2xl font-bold text-blue-700">Không giới hạn</div>
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={startQuiz}
-                    disabled={vocabList.length === 0}
-                    className="bg-gradient-to-r from-purple-500 to-pink-600 text-white px-8 py-4 rounded-xl hover:from-purple-600 hover:to-pink-700 transition-all duration-300 font-semibold text-lg shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <Play className="w-5 h-5 inline mr-2" />
-                    Bắt đầu kiểm tra
-                  </button>
-                </div>
+        <div className="container mx-auto px-6 py-8 max-w-4xl">
+          {/* Loading State */}
+          {loading && (
+            <div className="flex flex-col items-center justify-center py-20">
+              <div className="relative">
+                <div className="w-16 h-16 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
+                <div className="absolute inset-0 w-16 h-16 border-4 border-purple-200 border-b-purple-600 rounded-full animate-spin" style={{animationDirection: 'reverse', animationDuration: '1.5s'}}></div>
               </div>
-            )}
+              <p className="mt-4 text-gray-600 font-medium">Đang tải từ vựng...</p>
+            </div>
+          )}
 
-            {/* Quiz Section */}
-            {quizStarted && currentQuestion && (
-              <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 sm:p-8 shadow-lg">
-                {/* Question Header */}
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-600 rounded-full flex items-center justify-center">
-                      <span className="text-white text-xs font-bold">{totalQuestions + 1}</span>
+          {/* Main Content */}
+          {!loading && (
+            <div className="space-y-8">
+              {/* Start Quiz Section */}
+              {!quizStarted && (
+                <div className="text-center">
+                  {/* Hero Section */}
+                  <div className="bg-white/80 backdrop-blur-xl rounded-3xl p-12 shadow-xl border border-gray-200/50 mb-8">
+                    <div className="w-24 h-24 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-8 shadow-2xl">
+                      <BookOpen className="w-12 h-12 text-white" />
                     </div>
-                    <span className="text-sm text-gray-600">
-                      Tiếng Việt → Tiếng Anh
-                    </span>
+                    
+                    <h2 className="text-4xl font-bold text-gray-800 mb-4">
+                      Sẵn sàng thử thách?
+                    </h2>
+                    <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
+                      Kiểm tra trình độ từ vựng với {vocabList.length} từ được tuyển chọn
+                    </p>
+
+                    <button
+                      onClick={startQuiz}
+                      disabled={vocabList.length === 0}
+                      className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white px-12 py-4 rounded-2xl font-bold text-lg shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                    >
+                      <Play className="w-6 h-6 inline mr-3" />
+                      Bắt đầu ngay
+                    </button>
                   </div>
-                  
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-gray-600">Điểm:</span>
-                    <span className="font-bold text-purple-600">{score}/{totalQuestions}</span>
+
+                  {/* Stats Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="bg-white/80 backdrop-blur-xl rounded-2xl p-8 shadow-lg border border-gray-200/50 hover:shadow-xl transition-all duration-300">
+                      <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+                        <BookOpen className="w-8 h-8 text-white" />
+                      </div>
+                      <div className="text-3xl font-bold text-gray-800 mb-2">{vocabList.length}</div>
+                      <div className="text-gray-600 font-medium">Từ vựng</div>
+                    </div>
+
+                    <div className="bg-white/80 backdrop-blur-xl rounded-2xl p-8 shadow-lg border border-gray-200/50 hover:shadow-xl transition-all duration-300">
+                      <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+                        <Trophy className="w-8 h-8 text-white" />
+                      </div>
+                      <div className="text-3xl font-bold text-gray-800 mb-2">∞</div>
+                      <div className="text-gray-600 font-medium">Câu hỏi</div>
+                    </div>
+
+                    <div className="bg-white/80 backdrop-blur-xl rounded-2xl p-8 shadow-lg border border-gray-200/50 hover:shadow-xl transition-all duration-300">
+                      <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+                        <Volume2 className="w-8 h-8 text-white" />
+                      </div>
+                      <div className="text-3xl font-bold text-gray-800 mb-2">AI</div>
+                      <div className="text-gray-600 font-medium">Phân tích phát âm</div>
+                    </div>
                   </div>
                 </div>
+              )}
 
-                {/* Question */}
-                <div className="text-center space-y-6">
-                  <div>
-                    <h3 className="text-xl sm:text-2xl font-bold text-gray-800 mb-2">
-                      {currentQuestion.question}
-                    </h3>
-                    {currentQuestion.hint && (
-                      <p className="text-gray-500 text-sm italic">
-                        💡 {currentQuestion.hint}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Answer Input */}
-                  <div className="max-w-md mx-auto">
-                    <input
-                      type="text"
-                      placeholder="Nhập câu trả lời..."
-                      value={userAnswer}
-                      onChange={(e) => setUserAnswer(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && !showResult && checkAnswer()}
-                      disabled={showResult}
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-purple-100 focus:border-purple-400 transition-all duration-300 bg-white/70 backdrop-blur-sm text-gray-800 placeholder-gray-400 disabled:opacity-50"
-                    />
-                  </div>
-
-                  {/* Result Display */}
-                  {showResult && (
-                    <div className={`p-4 rounded-xl ${isCorrect ? 'bg-green-50 border-2 border-green-200' : 'bg-red-50 border-2 border-red-200'}`}>
-                      <div className="flex items-center justify-center gap-2 mb-2">
-                        {isCorrect ? (
-                          <CheckCircle className="w-6 h-6 text-green-600" />
-                        ) : (
-                          <XCircle className="w-6 h-6 text-red-600" />
-                        )}
-                        <span className={`font-semibold ${isCorrect ? 'text-green-700' : 'text-red-700'}`}>
-                          {isCorrect ? 'Chính xác!' : 'Sai rồi!'}
-                        </span>
+              {/* Quiz Section */}
+              {quizStarted && currentQuestion && (
+                <div className="space-y-8">
+                  {/* Question Card */}
+                  <div className="bg-white/80 backdrop-blur-xl rounded-3xl p-8 shadow-xl border border-gray-200/50">
+                    {/* Question Header */}
+                    <div className="flex items-center justify-between mb-8">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center shadow-lg">
+                          <span className="text-white font-bold">{totalQuestions + 1}</span>
+                        </div>
+                        <div>
+                          <div className="text-sm font-semibold text-indigo-600 mb-1">Câu hỏi #{totalQuestions + 1}</div>
+                          <div className="text-xs text-gray-500">Tiếng Việt → Tiếng Anh</div>
+                        </div>
                       </div>
-                      {!isCorrect && (
-                        <div className="text-center">
-                          <p className="text-gray-700">
-                            <span className="font-semibold">Đáp án đúng:</span> "{currentQuestion.answer}"
-                          </p>
-                          <p className="text-xs text-gray-500 mt-2">
-                            💡 Mẹo: Kiểm tra lại chính tả và khoảng cách
-                          </p>
+                      
+                      <div className="text-right">
+                        <div className="text-2xl font-bold text-gray-800">{score}/{totalQuestions}</div>
+                        <div className="text-xs text-gray-500">Điểm hiện tại</div>
+                      </div>
+                    </div>
+
+                    {/* Question Content */}
+                    <div className="text-center space-y-8">
+                      <div className="space-y-4">
+                        <div className="text-sm font-medium text-gray-500 uppercase tracking-wide">Dịch sang tiếng Anh</div>
+                        <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-2xl p-8 border border-indigo-100">
+                          <h3 className="text-3xl font-bold text-gray-800 mb-4">
+                            {currentQuestion.question}
+                          </h3>
+                          {currentQuestion.hint && (
+                            <div className="bg-white/70 rounded-xl p-4 inline-block">
+                              <div className="flex items-center gap-2 text-amber-700">
+                                <Lightbulb className="w-4 h-4" />
+                                <span className="text-sm font-medium">{currentQuestion.hint}</span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Answer Input */}
+                      <div className="max-w-lg mx-auto space-y-4">
+                        <input
+                          type="text"
+                          placeholder="Nhập câu trả lời của bạn..."
+                          value={userAnswer}
+                          onChange={(e) => setUserAnswer(e.target.value)}
+                          onKeyPress={(e) => e.key === 'Enter' && !showResult && checkAnswer()}
+                          disabled={showResult}
+                          className="w-full px-6 py-4 border-2 border-gray-200 rounded-2xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-400 transition-all duration-300 bg-white/80 backdrop-blur-sm text-gray-800 placeholder-gray-400 disabled:opacity-50 text-lg font-medium"
+                        />
+                        
+                        {!showResult && (
+                          <button
+                            onClick={checkAnswer}
+                            className="w-full bg-gradient-to-r from-indigo-500 to-purple-600 text-white px-8 py-4 rounded-2xl hover:from-indigo-600 hover:to-purple-700 transition-all duration-300 font-bold text-lg shadow-lg hover:shadow-xl hover:scale-105"
+                          >
+                            Kiểm tra đáp án
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Result Display */}
+                      {showResult && (
+                        <div className="space-y-6">
+                          <div className={`p-6 rounded-2xl border-2 ${
+                            isCorrect 
+                              ? 'bg-green-50 border-green-200' 
+                              : 'bg-red-50 border-red-200'
+                          }`}>
+                            <div className="flex items-center justify-center gap-3 mb-4">
+                              {isCorrect ? (
+                                <CheckCircle className="w-8 h-8 text-green-600" />
+                              ) : (
+                                <XCircle className="w-8 h-8 text-red-600" />
+                              )}
+                              <span className={`font-bold text-xl ${
+                                isCorrect ? 'text-green-700' : 'text-red-700'
+                              }`}>
+                                {isCorrect ? 'Chính xác!' : 'Chưa đúng!'}
+                              </span>
+                            </div>
+                            
+                            {!isCorrect && (
+                              <div className="bg-white/80 rounded-xl p-4">
+                                <div className="text-gray-700 mb-2">
+                                  <span className="font-semibold text-red-700">Đáp án của bạn:</span> "{userAnswer}"
+                                </div>
+                                <div className="text-gray-700">
+                                  <span className="font-semibold text-green-700">Đáp án đúng:</span> "{currentQuestion.answer}"
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
+                          <button
+                            onClick={nextQuestion}
+                            className="w-full max-w-md mx-auto block bg-gradient-to-r from-green-500 to-emerald-600 text-white px-8 py-4 rounded-2xl hover:from-green-600 hover:to-emerald-700 transition-all duration-300 font-bold text-lg shadow-lg hover:shadow-xl hover:scale-105"
+                          >
+                            Câu tiếp theo
+                          </button>
                         </div>
                       )}
                     </div>
-                  )}
+                  </div>
 
-                  {/* Recording Section - Show after result, regardless of correctness */}
+                  {/* Pronunciation Practice Section */}
                   {showResult && (
-                    <div className="bg-white/80 backdrop-blur-sm rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-lg border border-gray-200/60">
-                      <div className="text-center space-y-4">
-                                                <div className="flex items-center justify-center gap-2 sm:gap-3">
-                          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center shadow-lg">
-                            <Volume2 className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                    <div className="bg-white/80 backdrop-blur-xl rounded-3xl p-8 shadow-xl border border-gray-200/50">
+                      <div className="text-center space-y-6">
+                        {/* Section Header */}
+                        <div className="flex items-center justify-center gap-3 mb-8">
+                          <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-full flex items-center justify-center shadow-lg">
+                            <Mic className="w-6 h-6 text-white" />
                           </div>
-                          <h4 className="font-bold text-slate-800 text-base sm:text-lg tracking-wide">Luyện phát âm</h4>
+                          <h3 className="text-2xl font-bold text-gray-800">Luyện phát âm</h3>
                         </div>
-                        
-                        <div className="text-center space-y-2 sm:space-y-3">
-                          <p className="text-xs sm:text-sm text-slate-600 font-medium tracking-wide">
-                            Ghi âm phát âm từ:
-                          </p>
-                          <div className="bg-white/80 backdrop-blur-sm rounded-lg sm:rounded-xl px-4 sm:px-6 py-3 sm:py-4 border border-gray-200/80 shadow-lg">
-                            <p className="text-lg sm:text-xl md:text-2xl font-bold text-slate-800 tracking-wide">
-                              "{currentQuestion.answer}"
-                            </p>
-                          </div>
-                        </div>               
-                        
-                        {/* Practice Sentence Suggestion Button */}
-                        <div className="flex items-center justify-center">
-                          <button
-                            onClick={() => generatePracticeSentence(currentQuestion.answer)}
-                            disabled={isGeneratingSentence}
-                            className="flex items-center gap-2 sm:gap-3 bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 hover:from-emerald-600 hover:via-teal-600 hover:to-cyan-600 disabled:from-slate-400 disabled:via-slate-500 disabled:to-slate-600 text-white px-4 sm:px-6 md:px-8 py-3 sm:py-4 rounded-xl sm:rounded-2xl text-sm sm:text-base font-bold transition-all duration-300 shadow-lg sm:shadow-xl hover:shadow-xl sm:hover:shadow-2xl transform hover:scale-105 disabled:transform-none border border-white/20"
-                          >
-                            {isGeneratingSentence ? (
-                              <>
-                                <div className="w-4 h-4 sm:w-6 sm:h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                                <span className="text-xs sm:text-sm">Đang tạo gợi ý...</span>
-                              </>
-                            ) : (
-                              <>
-                                <BookOpen className="w-4 h-4 sm:w-6 sm:h-6" />
-                                <span className="text-xs sm:text-sm">💡 Gợi ý đoạn văn luyện tập</span>
-                              </>
-                            )}
-                          </button>
+
+                        {/* Word to Practice */}
+                        <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-2xl p-6 border border-blue-100">
+                          <div className="text-sm font-medium text-blue-600 mb-2">Luyện phát âm từ:</div>
+                          <div className="text-3xl font-bold text-gray-800 mb-4">"{currentQuestion.answer}"</div>
                         </div>
-                        
+
+                        {/* Practice Sentence Generator */}
+                        <button
+                          onClick={() => generatePracticeSentence(currentQuestion.answer)}
+                          disabled={isGeneratingSentence}
+                          className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 disabled:from-gray-400 disabled:to-gray-500 text-white px-8 py-4 rounded-xl font-bold transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 disabled:hover:scale-100"
+                        >
+                          {isGeneratingSentence ? (
+                            <div className="flex items-center gap-3">
+                              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                              <span>Đang tạo câu mẫu...</span>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-3">
+                              <Lightbulb className="w-5 h-5" />
+                              <span>Tạo câu mẫu luyện tập</span>
+                            </div>
+                          )}
+                        </button>
+
+                        {/* Spacer to increase distance between buttons */}
+                        <div className="h-8"></div>
+
                         {/* Practice Sentence Display */}
                         {practiceSentence && (
-                          <div className="bg-white/80 backdrop-blur-sm rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-gray-200/60 shadow-lg sm:shadow-xl">
-                            <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
-                              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-full flex items-center justify-center shadow-lg">
-                                <BookOpen className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-                              </div>
-                              <p className="font-bold text-slate-800 text-base sm:text-lg tracking-wide">📝 Đoạn văn luyện tập</p>
+                          <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-2xl p-6 border border-emerald-100">
+                            <div className="flex items-center gap-2 mb-4">
+                              <BookOpen className="w-5 h-5 text-emerald-600" />
+                              <span className="font-bold text-emerald-700">Câu mẫu luyện tập</span>
                             </div>
-                            <div className="bg-white/90 backdrop-blur-sm rounded-lg sm:rounded-xl p-3 sm:p-5 border border-gray-200/60 mb-4 sm:mb-5 shadow-lg">
-                              <p className="text-slate-800 text-sm sm:text-lg leading-relaxed italic font-semibold">
+                            <div className="bg-white/80 rounded-xl p-4 mb-4">
+                              <p className="text-gray-800 text-lg italic font-medium">
                                 "{practiceSentence}"
                               </p>
                             </div>
-                            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+                            <div className="flex flex-wrap gap-3 justify-center">
                               <button
                                 onClick={() => {
                                   if ('speechSynthesis' in window) {
@@ -835,191 +883,138 @@ export default function CheckPage() {
                                     speechSynthesis.speak(utterance);
                                   }
                                 }}
-                                className="flex items-center justify-center gap-2 sm:gap-3 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 hover:from-blue-600 hover:via-indigo-600 hover:to-purple-600 text-white px-4 sm:px-6 py-3 rounded-lg sm:rounded-xl text-sm sm:text-base font-bold transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 border border-white/20"
+                                className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-xl font-bold transition-all duration-300 shadow-lg hover:shadow-xl"
                               >
-                                <Volume2 className="w-4 h-4 sm:w-5 sm:h-5" />
-                                🔊 Nghe phát âm
+                                <Volume2 className="w-4 h-4 inline mr-2" />
+                                Nghe phát âm
                               </button>
                               <button
                                 onClick={() => generatePracticeSentence(currentQuestion.answer)}
-                                className="flex items-center justify-center gap-2 sm:gap-3 bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 hover:from-emerald-600 hover:via-teal-600 hover:to-cyan-600 text-white px-4 sm:px-6 py-3 rounded-lg sm:rounded-xl text-sm sm:text-base font-bold transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 border border-white/20"
+                                className="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-3 rounded-xl font-bold transition-all duration-300 shadow-lg hover:shadow-xl"
                               >
-                                <RefreshCw className="w-4 h-4 sm:w-5 sm:h-5" />
-                                🔄 Tạo mẫu khác
-                              </button>
-                              <button
-                                onClick={() => setPracticeSentence(null)}
-                                className="flex items-center justify-center gap-2 sm:gap-3 bg-gradient-to-r from-slate-500 via-gray-500 to-zinc-500 hover:from-slate-600 hover:via-gray-600 hover:to-zinc-600 text-white px-4 sm:px-6 py-3 rounded-lg sm:rounded-xl text-sm sm:text-base font-bold transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 border border-white/20"
-                              >
-                                <XCircle className="w-4 h-4 sm:w-5 sm:h-5" />
-                                Đóng
+                                <RefreshCw className="w-4 h-4 inline mr-2" />
+                                Tạo câu khác
                               </button>
                             </div>
                           </div>
                         )}
 
-                        {/* Real-time Transcription Display (keep visible after stop) */}
+                        {/* Real-time Recording Display */}
                         {(recording || realTimeText) && (
-                          <div className="bg-white/80 backdrop-blur-sm rounded-xl sm:rounded-2xl p-4 sm:p-5 border border-gray-200/60 shadow-lg">
-                            <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+                          <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-2xl p-6 border border-purple-100">
+                            <div className="flex items-center justify-center gap-3 mb-4">
                               {recording ? (
-                                <div className="w-5 h-5 sm:w-6 sm:h-6 bg-gradient-to-r from-red-500 to-pink-500 rounded-full animate-pulse flex items-center justify-center shadow-lg">
-                                  <div className="w-2 h-2 sm:w-3 sm:h-3 bg-white rounded-full"></div>
+                                <div className="w-6 h-6 bg-red-500 rounded-full animate-pulse flex items-center justify-center">
+                                  <div className="w-3 h-3 bg-white rounded-full"></div>
                                 </div>
                               ) : (
-                                <div className="w-5 h-5 sm:w-6 sm:h-6 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full flex items-center justify-center shadow-lg">
-                                  <div className="w-2 h-2 sm:w-3 sm:h-3 bg-white rounded-full"></div>
+                                <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
+                                  <CheckCircle className="w-4 h-4 text-white" />
                                 </div>
                               )}
-                              <span className="text-base sm:text-lg font-bold text-slate-800 tracking-wide">
-                                {recording ? '🎤 Đang ghi âm...' : '📝 Kết quả ghi âm'}
+                              <span className="font-bold text-gray-800">
+                                {recording ? 'Đang ghi âm...' : 'Kết quả ghi âm'}
                               </span>
-                              {recording && isTranscribing && (
-                                <div className="flex items-center gap-1 sm:gap-2">
-                                  <div className="w-2 h-2 sm:w-3 sm:h-3 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full animate-bounce"></div>
-                                  <div className="w-2 h-2 sm:w-3 sm:h-3 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
-                                  <div className="w-2 h-2 sm:w-3 sm:h-3 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
-                                </div>
-                              )}
                             </div>
-                            <div className="bg-white/90 backdrop-blur-sm rounded-lg sm:rounded-xl p-3 sm:p-5 border border-gray-200/60 shadow-lg">
+                            <div className="bg-white/80 rounded-xl p-4">
                               {realTimeText ? (
-                                <p className="text-slate-800 font-bold text-sm sm:text-lg leading-relaxed">
+                                <p className="text-gray-800 font-semibold text-lg">
                                   "{realTimeText}"
                                 </p>
                               ) : (
-                                <p className="text-slate-500 italic text-sm sm:text-lg">
-                                  {recording ? (isTranscribing ? 'Đang nhận diện giọng nói...' : 'Bắt đầu nói...') : 'Chưa có nội dung'}
+                                <p className="text-gray-500 italic">
+                                  {recording ? 'Hãy bắt đầu nói...' : 'Chưa có nội dung'}
                                 </p>
                               )}
                             </div>
                           </div>
                         )}
 
-                        {/* Permission Status */}
+                        {/* Microphone Permission Error */}
                         {microphonePermission === 'denied' && (
-                          <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                            <div className="flex items-center gap-2 text-red-700 text-sm">
-                              <MicOff className="w-4 h-4" />
-                              <span className="font-semibold">Quyền microphone bị từ chối</span>
+                          <div className="bg-red-50 border border-red-200 rounded-2xl p-6">
+                            <div className="flex items-center gap-3 text-red-700 mb-4">
+                              <MicOff className="w-6 h-6" />
+                              <span className="font-bold text-lg">Quyền microphone bị từ chối</span>
                             </div>
-                            <p className="text-red-600 text-xs mt-1">
+                            <p className="text-red-600 mb-4">
                               Vui lòng cấp quyền microphone trong cài đặt trình duyệt để sử dụng tính năng ghi âm.
                             </p>
-                            <div className="mt-2 text-xs text-red-600">
-                              <p className="font-semibold">Cách cấp quyền:</p>
-                              <ul className="list-disc list-inside mt-1 space-y-1">
-                                <li>Chrome: Nhấp vào biểu tượng khóa 🔒 trên thanh địa chỉ</li>
-                                <li>Firefox: Nhấp vào biểu tượng microphone bị gạch chéo</li>
-                                <li>Safari: Vào Safari → Preferences → Websites → Microphone</li>
-                              </ul>
-                            </div>
-                            <div className="mt-3">
-                              <button
-                                onClick={retryMicrophonePermission}
-                                className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg text-xs font-semibold transition-colors duration-200"
-                              >
-                                Thử lại
-                              </button>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Help Section - Show when not recording */}
-                        {!recording && (
-                          <div className="bg-white/80 backdrop-blur-sm border border-gray-200/60 rounded-xl sm:rounded-2xl p-4 sm:p-5 mb-4 sm:mb-5 shadow-lg">
-                            <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
-                              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-amber-500 rounded-full flex items-center justify-center shadow-lg">
-                                <div className="w-2 h-2 sm:w-3 sm:h-3 bg-white rounded-full"></div>
-                              </div>
-                              <p className="text-base sm:text-lg font-bold text-slate-800 tracking-wide">💡 Không biết nói gì?</p>
-                            </div>
-                            <p className="text-slate-700 text-sm sm:text-base mb-3 sm:mb-4 leading-relaxed">
-                              Nhấn nút <span className="font-bold text-amber-700">"Gợi ý đoạn văn luyện tập"</span> ở trên để lấy ý tưởng đoạn văn có chứa từ <span className="font-bold text-slate-800">"{currentQuestion.answer}"</span>
-                            </p>
-                      
+                            <button
+                              onClick={retryMicrophonePermission}
+                              className="bg-red-500 hover:bg-red-600 text-white px-6 py-3 rounded-xl font-bold transition-all duration-300"
+                            >
+                              Thử lại
+                            </button>
                           </div>
                         )}
 
                         {/* Recording Button */}
-                        <div className="flex items-center justify-center gap-3">
-                          <button
-                            onClick={recording ? stopRecording : startRecording}
-                            disabled={microphonePermission === 'denied'}
-                            className={`flex items-center gap-2 sm:gap-3 px-6 sm:px-8 py-3 sm:py-4 rounded-xl sm:rounded-2xl font-bold transition-all duration-300 shadow-lg sm:shadow-xl hover:shadow-xl sm:hover:shadow-2xl transform hover:scale-105 disabled:transform-none border border-white/20 ${
-                              recording 
-                                ? "bg-gradient-to-r from-red-500 via-pink-500 to-rose-500 hover:from-red-600 hover:via-pink-600 hover:to-rose-600 text-white" 
-                                : microphonePermission === 'denied'
-                                ? "bg-gradient-to-r from-slate-400 via-gray-400 to-zinc-400 text-slate-600 cursor-not-allowed"
-                                : "bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 hover:from-blue-600 hover:via-indigo-600 hover:to-purple-600 text-white"
-                            }`}
-                          >
-                            {recording ? (
-                              <>
-                                <MicOff className="w-5 h-5 sm:w-6 sm:h-6" />
-                                <span className="text-sm sm:text-base">Dừng ghi âm</span>
-                              </>
-                            ) : (
-                              <>
-                                <Mic className="w-5 h-5 sm:w-6 sm:h-6" />
-                                <span className="text-sm sm:text-base">{microphonePermission === 'denied' ? 'Không có quyền' : 'Bắt đầu ghi âm'}</span>
-                              </>
-                            )}
-                          </button>
-                        </div>
+                        <button
+                          onClick={recording ? stopRecording : startRecording}
+                          disabled={microphonePermission === 'denied'}
+                          className={`px-8 py-4 rounded-2xl font-bold text-lg shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 disabled:hover:scale-100 ${
+                            recording 
+                              ? "bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white" 
+                              : microphonePermission === 'denied'
+                              ? "bg-gray-400 text-gray-600 cursor-not-allowed"
+                              : "bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white"
+                          }`}
+                        >
+                          {recording ? (
+                            <div className="flex items-center gap-3">
+                              <MicOff className="w-6 h-6" />
+                              <span>Dừng ghi âm</span>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-3">
+                              <Mic className="w-6 h-6" />
+                              <span>{microphonePermission === 'denied' ? 'Không có quyền' : 'Bắt đầu ghi âm'}</span>
+                            </div>
+                          )}
+                        </button>
 
-                        {/* Audio Player (hidden as requested) */}
-                        {audioUrl && (
-                          <div className="mt-3 hidden">
-                            <audio 
-                              src={audioUrl} 
-                              controls 
-                              className="w-full max-w-xs mx-auto"
-                            />
-                          </div>
-                        )}
-
-                        {/* Pronunciation Analysis Feedback */}
+                        {/* Pronunciation Analysis */}
                         {(isAnalyzing || pronunciationFeedback) && (
-                          <div className="mt-4">
+                          <div className="space-y-6">
                             {isAnalyzing ? (
-                              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                                <div className="flex items-center justify-center gap-2">
-                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-yellow-600"></div>
-                                  <span className="text-yellow-700 font-semibold">Đang phân tích phát âm...</span>
+                              <div className="bg-yellow-50 border border-yellow-200 rounded-2xl p-6">
+                                <div className="flex items-center justify-center gap-3">
+                                  <div className="w-8 h-8 border-4 border-yellow-300 border-t-yellow-600 rounded-full animate-spin"></div>
+                                  <span className="text-yellow-700 font-bold text-lg">Đang phân tích phát âm...</span>
                                 </div>
                               </div>
-                            ) : pronunciationFeedback ? (
-                              <div className={`border-2 rounded-lg p-4 ${
+                            ) : pronunciationFeedback && (
+                              <div className={`rounded-2xl p-6 border-2 ${
                                 pronunciationFeedback.score >= 80 
                                   ? 'bg-green-50 border-green-200' 
                                   : pronunciationFeedback.score >= 60 
                                   ? 'bg-yellow-50 border-yellow-200'
                                   : 'bg-red-50 border-red-200'
                               }`}>
-                                <div className="flex items-center justify-between mb-2">
-                                  <div className="flex items-center gap-2">
+                                <div className="flex items-center justify-between mb-6">
+                                  <div className="flex items-center gap-3">
                                     {pronunciationFeedback.score >= 80 ? (
-                                      <CheckCircle className="w-5 h-5 text-green-600" />
+                                      <CheckCircle className="w-8 h-8 text-green-600" />
                                     ) : pronunciationFeedback.score >= 60 ? (
-                                      <div className="w-5 h-5 border-2 border-yellow-600 rounded-full flex items-center justify-center">
-                                        <div className="w-2 h-2 bg-yellow-600 rounded-full"></div>
+                                      <div className="w-8 h-8 border-3 border-yellow-600 rounded-full flex items-center justify-center">
+                                        <div className="w-3 h-3 bg-yellow-600 rounded-full"></div>
                                       </div>
                                     ) : (
-                                      <XCircle className="w-5 h-5 text-red-600" />
+                                      <XCircle className="w-8 h-8 text-red-600" />
                                     )}
-                                    <span className={`font-semibold ${
+                                    <span className={`font-bold text-xl ${
                                       pronunciationFeedback.score >= 80 
                                         ? 'text-green-700' 
                                         : pronunciationFeedback.score >= 60 
                                         ? 'text-yellow-700'
                                         : 'text-red-700'
                                     }`}>
-                                      Phân tích phát âm
+                                      Kết quả phân tích
                                     </span>
                                   </div>
                                   {pronunciationFeedback.score !== null && (
-                                    <div className={`px-2 py-1 rounded-full text-xs font-bold ${
+                                    <div className={`px-4 py-2 rounded-full font-bold text-lg ${
                                       pronunciationFeedback.score >= 80 
                                         ? 'bg-green-100 text-green-700' 
                                         : pronunciationFeedback.score >= 60 
@@ -1031,476 +1026,134 @@ export default function CheckPage() {
                                   )}
                                 </div>
                                 
-                                <div className="text-sm">
-                                  <div className="bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 rounded-xl sm:rounded-2xl p-4 sm:p-5 border border-slate-200/60 shadow-lg backdrop-blur-sm">
-                                    <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
-                                      <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center shadow-lg">
-                                        <Trophy className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-                                      </div>
-                                      <p className="font-bold text-slate-800 text-base sm:text-lg tracking-wide">🏆 Đánh giá tổng quan</p>
-                                    </div>
-                                    <div className="bg-white/90 backdrop-blur-sm rounded-lg sm:rounded-xl p-3 sm:p-5 border border-slate-200/60 shadow-lg">
-                                      <p className={`font-bold text-sm sm:text-lg leading-relaxed ${
-                                        pronunciationFeedback.feedback.includes('⚠️') 
-                                          ? 'text-amber-700 bg-amber-50 p-3 rounded-lg border border-amber-200'
-                                          : pronunciationFeedback.score >= 80 
-                                          ? 'text-emerald-700' 
-                                          : pronunciationFeedback.score >= 60 
-                                          ? 'text-amber-700'
-                                          : 'text-rose-700'
-                                      }`}>
-                                        {pronunciationFeedback.feedback}
-                                      </p>
-                                    </div>
-                                  </div>
-                                  
-                                  {/* Detailed Analysis */}
-                                  {pronunciationFeedback.detailedAnalysis && pronunciationFeedback.detailedAnalysis.length > 0 && (
-                                    <div className="mt-3 space-y-1">
-                                      {pronunciationFeedback.detailedAnalysis.map((analysis, index) => (
-                                        <p key={index} className="text-xs text-gray-600">
-                                          {analysis}
-                                        </p>
-                                      ))}
-                                    </div>
-                                  )}
-                                  
-                                  {/* Word-Level Analysis */}
-                                  {pronunciationFeedback.wordAnalysis && (
-                                    <div className="mt-4 sm:mt-5 p-4 sm:p-5 bg-gradient-to-br from-violet-50 via-purple-50 to-fuchsia-50 rounded-xl sm:rounded-2xl border border-violet-200/60 shadow-lg backdrop-blur-sm">
-                                      <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
-                                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-violet-500 to-purple-600 rounded-full flex items-center justify-center shadow-lg">
-                                          <div className="w-2 h-2 sm:w-3 sm:h-3 bg-white rounded-full"></div>
-                                        </div>
-                                        <p className="font-bold text-slate-800 text-base sm:text-lg tracking-wide">🔍 Phân tích từng từ</p>
-                                      </div>
-                                      
-                                      {/* Strong Words */}
-                                      {pronunciationFeedback.wordAnalysis.strongWords && pronunciationFeedback.wordAnalysis.strongWords.length > 0 && (
-                                        <div className="mb-4 sm:mb-5">
-                                          <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3">
-                                            <div className="w-5 h-5 sm:w-6 sm:h-6 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-full flex items-center justify-center shadow-md">
-                                              <CheckCircle className="w-2 h-2 sm:w-3 sm:h-3 text-white" />
-                                            </div>
-                                            <p className="text-emerald-700 font-bold text-sm sm:text-base">✅ Phát âm tốt</p>
-                                          </div>
-                                          <div className="flex flex-wrap gap-2 sm:gap-3">
-                                            {pronunciationFeedback.wordAnalysis.strongWords.map((word, index) => (
-                                              <span key={index} className="bg-gradient-to-r from-emerald-100 to-teal-100 text-emerald-800 px-3 sm:px-4 py-2 sm:py-3 rounded-lg sm:rounded-xl text-sm sm:text-base font-bold shadow-md border border-emerald-200/60">
-                                                {word.text} ({word.confidence}%)
-                                              </span>
-                                            ))}
-                                          </div>
-                                        </div>
-                                      )}
-                                      
-                                      {/* Weak Words */}
-                                      {pronunciationFeedback.wordAnalysis.weakWords && pronunciationFeedback.wordAnalysis.weakWords.length > 0 && (
-                                        <div className="mb-4 sm:mb-5">
-                                          <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3">
-                                            <div className="w-5 h-5 sm:w-6 sm:h-6 bg-gradient-to-br from-rose-500 to-pink-600 rounded-full flex items-center justify-center shadow-md">
-                                              <XCircle className="w-2 h-2 sm:w-3 sm:h-3 text-white" />
-                                            </div>
-                                            <p className="text-rose-700 font-bold text-sm sm:text-base">❌ Cần cải thiện</p>
-                                          </div>
-                                          <div className="flex flex-wrap gap-2 sm:gap-3">
-                                            {pronunciationFeedback.wordAnalysis.weakWords.map((word, index) => (
-                                              <span key={index} className="bg-gradient-to-r from-rose-100 to-pink-100 text-rose-800 px-3 sm:px-4 py-2 sm:py-3 rounded-lg sm:rounded-xl text-sm sm:text-base font-bold shadow-md border border-rose-200/60">
-                                                {word.text} ({word.confidence}%)
-                                              </span>
-                                            ))}
-                                          </div>
-                                        </div>
-                                      )}
-                                      
-                                      {/* Word Analysis Details */}
-                                      {pronunciationFeedback.wordAnalysis.wordAnalysis && pronunciationFeedback.wordAnalysis.wordAnalysis.length > 0 && (
-                                        <div className="mt-3 sm:mt-4 space-y-2 sm:space-y-3">
-                                          {pronunciationFeedback.wordAnalysis.wordAnalysis.map((analysis, index) => (
-                                            <div key={index} className="bg-white/80 backdrop-blur-sm rounded-lg sm:rounded-xl p-3 sm:p-4 border border-violet-200/60 shadow-md">
-                                              <p className="text-slate-700 text-sm sm:text-base font-semibold leading-relaxed">
-                                                {analysis}
-                                              </p>
-                                            </div>
-                                          ))}
-                                        </div>
-                                      )}
-                                    </div>
-                                  )}
-
-                                  {/* Debug: Log pronunciation feedback structure */}
-                                  {console.log('Pronunciation Feedback Structure:', pronunciationFeedback)}
-                                  
-                                  {/* Improvement Suggestions */}
-                                  {pronunciationFeedback.improvementSuggestions && pronunciationFeedback.improvementSuggestions.length > 0 && (
-                                    <div className="mt-4 sm:mt-5 p-4 sm:p-5 bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 rounded-xl sm:rounded-2xl border border-emerald-200/60 shadow-lg backdrop-blur-sm">
-                                      <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
-                                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-full flex items-center justify-center shadow-lg">
-                                          <div className="w-2 h-2 sm:w-3 sm:h-3 bg-white rounded-full"></div>
-                                        </div>
-                                        <p className="font-bold text-slate-800 text-base sm:text-lg tracking-wide">💡 Gợi ý cải thiện</p>
-                                      </div>
-                                      <div className="space-y-3 sm:space-y-4">
-                                        {pronunciationFeedback.improvementSuggestions.map((suggestion, index) => (
-                                          <div key={index} className="flex items-start gap-3 sm:gap-4 bg-white/80 backdrop-blur-sm rounded-lg sm:rounded-xl p-3 sm:p-4 border border-emerald-200/60 shadow-md">
-                                            <div className="w-2 h-2 sm:w-3 sm:h-3 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full mt-2 flex-shrink-0 shadow-sm"></div>
-                                            <p className="text-slate-700 text-sm sm:text-base leading-relaxed font-semibold">
-                                              {suggestion}
-                                            </p>
-                                          </div>
-                                        ))}
-                                      </div>
-                                      
-                                      
-                                       
-                                       {/* Practice Sentence Display */}
-                                       {practiceSentence && (
-                                         <div className="mt-3 p-3 bg-blue-50 rounded border border-blue-200">
-                                           <p className="font-semibold text-blue-700 mb-2 text-xs">📝 Đoạn văn luyện tập:</p>
-                                           <p className="text-blue-600 text-sm leading-relaxed">
-                                             {practiceSentence}
-                                           </p>
-                                           <div className="mt-2 flex gap-2">
-                                             <button
-                                               onClick={() => {
-                                                 if ('speechSynthesis' in window) {
-                                                   const utterance = new SpeechSynthesisUtterance(practiceSentence);
-                                                   utterance.lang = 'en-US';
-                                                   utterance.rate = 0.8;
-                                                   speechSynthesis.speak(utterance);
-                                                 }
-                                               }}
-                                               className="bg-green-500 hover:bg-green-600 text-white text-xs py-1 px-2 rounded transition-colors duration-200"
-                                             >
-                                               🔊 Nghe
-                                             </button>
-                                             <button
-                                               onClick={() => setPracticeSentence(null)}
-                                               className="bg-gray-500 hover:bg-gray-600 text-white text-xs py-1 px-2 rounded transition-colors duration-200"
-                                             >
-                                               ✕ Đóng
-                                             </button>
-                                           </div>
-                                         </div>
-                                       )}
-                                    </div>
-                                  )}
-
-                                  {/* Grammar Analysis - Only show if there's meaningful data */}
-                                  {pronunciationFeedback.grammarAnalysis && 
-                                   (pronunciationFeedback.grammarAnalysis.grammarScore > 0 || 
-                                    (pronunciationFeedback.grammarAnalysis.grammarErrors && pronunciationFeedback.grammarAnalysis.grammarErrors.length > 0) ||
-                                    (pronunciationFeedback.grammarAnalysis.grammarStrengths && pronunciationFeedback.grammarAnalysis.grammarStrengths.length > 0)) && (
-                                    <div className="mt-3 p-2 bg-gray-50 rounded text-xs">
-                                      <p className="font-semibold text-gray-700 mb-2">Phân tích ngữ pháp:</p>
-                                      <div className="space-y-1">
-                                        {pronunciationFeedback.grammarAnalysis.grammarScore > 0 && (
-                                          <p className="text-gray-600">
-                                            Điểm ngữ pháp: {pronunciationFeedback.grammarAnalysis.grammarScore}%
-                                          </p>
-                                        )}
-                                        {pronunciationFeedback.grammarAnalysis.grammarFeedback && 
-                                         pronunciationFeedback.grammarAnalysis.grammarFeedback !== "Không có dữ liệu ngữ pháp" && (
-                                          <p className="text-gray-600">
-                                            {pronunciationFeedback.grammarAnalysis.grammarFeedback}
-                                          </p>
-                                        )}
-                                        {pronunciationFeedback.grammarAnalysis.grammarStrengths && pronunciationFeedback.grammarAnalysis.grammarStrengths.length > 0 && (
-                                          <div className="mt-2">
-                                            <p className="text-gray-600 font-semibold">Điểm mạnh:</p>
-                                            {pronunciationFeedback.grammarAnalysis.grammarStrengths.map((strength, index) => (
-                                              <p key={index} className="text-gray-600 ml-2">
-                                                • {strength}
-                                              </p>
-                                            ))}
-                                          </div>
-                                        )}
-                                        {pronunciationFeedback.grammarAnalysis.grammarErrors && pronunciationFeedback.grammarAnalysis.grammarErrors.length > 0 && (
-                                          <div className="mt-2">
-                                            <p className="text-gray-600 font-semibold">Lỗi ngữ pháp:</p>
-                                            {pronunciationFeedback.grammarAnalysis.grammarErrors.map((error, index) => (
-                                              <div key={index} className="ml-2 mt-1">
-                                                <p className="text-gray-600">
-                                                  • {error.error} → {error.correction}
-                                                </p>
-                                                <p className="text-gray-500 text-xs ml-2">
-                                                  {error.explanation}
-                                                </p>
-                                              </div>
-                                            ))}
-                                          </div>
-                                        )}
-                                      </div>
-                                    </div>
-                                  )}
-
-                                  {/* Pronunciation Analysis - Only show if there's meaningful data */}
-                                  {pronunciationFeedback.pronunciationAnalysis && 
-                                   (pronunciationFeedback.pronunciationAnalysis.pronunciationScore > 0 || 
-                                    (pronunciationFeedback.pronunciationAnalysis.phoneticIssues && pronunciationFeedback.pronunciationAnalysis.phoneticIssues.length > 0) ||
-                                    (pronunciationFeedback.pronunciationAnalysis.stressPatterns && pronunciationFeedback.pronunciationAnalysis.stressPatterns.length > 0)) && (
-                                    <div className="mt-3 p-2 bg-gray-50 rounded text-xs">
-                                      <p className="font-semibold text-gray-700 mb-2">Phân tích phát âm:</p>
-                                      <div className="space-y-1">
-                                        {pronunciationFeedback.pronunciationAnalysis.pronunciationScore > 0 && (
-                                          <p className="text-gray-600">
-                                            Điểm phát âm: {pronunciationFeedback.pronunciationAnalysis.pronunciationScore}%
-                                          </p>
-                                        )}
-                                        {pronunciationFeedback.pronunciationAnalysis.clarityAssessment && 
-                                         pronunciationFeedback.pronunciationAnalysis.clarityAssessment !== "Không có dữ liệu" && (
-                                          <p className="text-gray-600">
-                                            {pronunciationFeedback.pronunciationAnalysis.clarityAssessment}
-                                          </p>
-                                        )}
-                                        {pronunciationFeedback.pronunciationAnalysis.phoneticIssues && pronunciationFeedback.pronunciationAnalysis.phoneticIssues.length > 0 && (
-                                          <div className="mt-2">
-                                            <p className="text-gray-600 font-semibold">Vấn đề phát âm:</p>
-                                            {pronunciationFeedback.pronunciationAnalysis.phoneticIssues.map((issue, index) => (
-                                              <p key={index} className="text-gray-600 ml-2">
-                                                • {issue}
-                                              </p>
-                                            ))}
-                                          </div>
-                                        )}
-                                        {pronunciationFeedback.pronunciationAnalysis.stressPatterns && pronunciationFeedback.pronunciationAnalysis.stressPatterns.length > 0 && (
-                                          <div className="mt-2">
-                                            <p className="text-gray-600 font-semibold">Nhấn nhá:</p>
-                                            {pronunciationFeedback.pronunciationAnalysis.stressPatterns.map((pattern, index) => (
-                                              <p key={index} className="text-gray-600 ml-2">
-                                                • {pattern}
-                                              </p>
-                                            ))}
-                                          </div>
-                                        )}
-                                      </div>
-                                    </div>
-                                  )}
-
-                                  {/* Fluency Analysis - Only show if there's meaningful data */}
-                                  {pronunciationFeedback.fluencyAnalysis && 
-                                   (pronunciationFeedback.fluencyAnalysis.fluencyScore > 0 || 
-                                    (pronunciationFeedback.fluencyAnalysis.hesitationPatterns && pronunciationFeedback.fluencyAnalysis.hesitationPatterns.length > 0)) && (
-                                    <div className="mt-3 p-2 bg-gray-50 rounded text-xs">
-                                      <p className="font-semibold text-gray-700 mb-2">Phân tích lưu loát:</p>
-                                      <div className="space-y-1">
-                                        {pronunciationFeedback.fluencyAnalysis.fluencyScore > 0 && (
-                                          <p className="text-gray-600">
-                                            Điểm lưu loát: {pronunciationFeedback.fluencyAnalysis.fluencyScore}%
-                                          </p>
-                                        )}
-                                        {pronunciationFeedback.fluencyAnalysis.paceAssessment && 
-                                         pronunciationFeedback.fluencyAnalysis.paceAssessment !== "Không có dữ liệu" && (
-                                          <p className="text-gray-600">
-                                            {pronunciationFeedback.fluencyAnalysis.paceAssessment}
-                                          </p>
-                                        )}
-                                        {pronunciationFeedback.fluencyAnalysis.naturalness && 
-                                         pronunciationFeedback.fluencyAnalysis.naturalness !== "Không có dữ liệu" && (
-                                          <p className="text-gray-600">
-                                            {pronunciationFeedback.fluencyAnalysis.naturalness}
-                                          </p>
-                                        )}
-                                        {pronunciationFeedback.fluencyAnalysis.hesitationPatterns && pronunciationFeedback.fluencyAnalysis.hesitationPatterns.length > 0 && (
-                                          <div className="mt-2">
-                                            <p className="text-gray-600 font-semibold">Vấn đề lưu loát:</p>
-                                            {pronunciationFeedback.fluencyAnalysis.hesitationPatterns.map((pattern, index) => (
-                                              <p key={index} className="text-gray-600 ml-2">
-                                                • {pattern}
-                                              </p>
-                                            ))}
-                                          </div>
-                                        )}
-                                      </div>
-                                    </div>
-                                  )}
-
-                                  {/* Overall Assessment - Only show if there's meaningful data */}
-                                  {pronunciationFeedback.overallAssessment && 
-                                   ((pronunciationFeedback.overallAssessment.strengths && pronunciationFeedback.overallAssessment.strengths.length > 0) ||
-                                    (pronunciationFeedback.overallAssessment.priorityAreas && pronunciationFeedback.overallAssessment.priorityAreas.length > 0) ||
-                                    (pronunciationFeedback.overallAssessment.learningPath && pronunciationFeedback.overallAssessment.learningPath !== "Không có dữ liệu")) && (
-                                    <div className="mt-3 p-2 bg-gray-50 rounded text-xs">
-                                      <p className="font-semibold text-gray-700 mb-2">Đánh giá tổng quan:</p>
-                                      <div className="space-y-1">
-                                        {pronunciationFeedback.overallAssessment.strengths && pronunciationFeedback.overallAssessment.strengths.length > 0 && (
-                                          <div className="mt-2">
-                                            <p className="text-gray-600 font-semibold">Điểm mạnh:</p>
-                                            {pronunciationFeedback.overallAssessment.strengths.map((strength, index) => (
-                                              <p key={index} className="text-gray-600 ml-2">
-                                                • {strength}
-                                              </p>
-                                            ))}
-                                          </div>
-                                        )}
-                                        {pronunciationFeedback.overallAssessment.priorityAreas && pronunciationFeedback.overallAssessment.priorityAreas.length > 0 && (
-                                          <div className="mt-2">
-                                            <p className="text-gray-600 font-semibold">Ưu tiên cải thiện:</p>
-                                            {pronunciationFeedback.overallAssessment.priorityAreas.map((area, index) => (
-                                              <p key={index} className="text-gray-600 ml-2">
-                                                {index + 1}. {area}
-                                              </p>
-                                            ))}
-                                          </div>
-                                        )}
-                                        {pronunciationFeedback.overallAssessment.learningPath && 
-                                         pronunciationFeedback.overallAssessment.learningPath !== "Không có dữ liệu" && (
-                                          <div className="mt-2">
-                                            <p className="text-gray-600 font-semibold">Lộ trình học:</p>
-                                            <p className="text-gray-600 ml-2">
-                                              {pronunciationFeedback.overallAssessment.learningPath}
-                                            </p>
-                                          </div>
-                                        )}
-                                      </div>
-                                    </div>
-                                  )}
-
-                                  {/* Emotional Analysis - Only show if there's meaningful data */}
-                               
-
-                                  {/* Score Breakdown - Hidden from users */}
-                                  {/* {pronunciationFeedback.breakdown && (
-                                    <div className="mt-3 p-2 bg-gray-50 rounded text-xs">
-                                      <p className="font-semibold text-gray-700 mb-1">Chi tiết điểm:</p>
-                                      <div className="space-y-1">
-                                        <p className="text-gray-600">
-                                          AssemblyAI: {pronunciationFeedback.breakdown.assemblyAIConfidence}%
-                                        </p>
-                                        <p className="text-gray-600">
-                                          OpenAI: {pronunciationFeedback.breakdown.openAIScore !== null ? `${pronunciationFeedback.breakdown.openAIScore}%` : 'Không khả dụng'}
-                                        </p>
-                                        {pronunciationFeedback.breakdown.sentimentScore && (
-                                          <p className="text-gray-600">
-                                            Cảm xúc: {pronunciationFeedback.breakdown.sentimentScore}%
-                                          </p>
-                                        )}
-                                      </div>
-                                    </div>
-                                  )} */}
-                                  
-                                  {pronunciationFeedback.details?.method === 'local' && (
-                                    <p className="text-xs text-gray-500 mt-2">
-                                      💡 Sử dụng đánh giá cục bộ
-                                    </p>
-                                  )}
+                                <div className="bg-white/80 rounded-xl p-6 mb-6">
+                                  <p className={`font-bold text-lg ${
+                                    pronunciationFeedback.score >= 80 
+                                      ? 'text-green-700' 
+                                      : pronunciationFeedback.score >= 60 
+                                      ? 'text-yellow-700'
+                                      : 'text-red-700'
+                                  }`}>
+                                    {pronunciationFeedback.feedback}
+                                  </p>
                                 </div>
 
-                                {/* Detailed feedback if available - Hidden from users */}
-                                {/* {pronunciationFeedback.details && pronunciationFeedback.details.method !== 'local' && (
-                                  <details className="mt-3">
-                                    <summary className="text-xs text-gray-600 cursor-pointer hover:text-gray-800">
-                                      Chi tiết phân tích
-                                    </summary>
-                                    <div className="mt-2 p-2 bg-gray-50 rounded text-xs text-gray-700">
-                                      <pre className="whitespace-pre-wrap">
-                                        {JSON.stringify(pronunciationFeedback.details, null, 2)}
-                                      </pre>
+                                {/* Word Analysis */}
+                                {pronunciationFeedback.wordAnalysis && (
+                                  <div className="space-y-4">
+                                    {pronunciationFeedback.wordAnalysis.strongWords && pronunciationFeedback.wordAnalysis.strongWords.length > 0 && (
+                                      <div>
+                                        <div className="flex items-center gap-2 mb-3">
+                                          <CheckCircle className="w-5 h-5 text-green-600" />
+                                          <span className="font-bold text-green-700">Phát âm tốt</span>
+                                        </div>
+                                        <div className="flex flex-wrap gap-2">
+                                          {pronunciationFeedback.wordAnalysis.strongWords.map((word, index) => (
+                                            <span key={index} className="bg-green-100 text-green-800 px-4 py-2 rounded-lg font-bold">
+                                              {word.text} ({word.confidence}%)
+                                            </span>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
+                                    
+                                    {pronunciationFeedback.wordAnalysis.weakWords && pronunciationFeedback.wordAnalysis.weakWords.length > 0 && (
+                                      <div>
+                                        <div className="flex items-center gap-2 mb-3">
+                                          <XCircle className="w-5 h-5 text-red-600" />
+                                          <span className="font-bold text-red-700">Cần cải thiện</span>
+                                        </div>
+                                        <div className="flex flex-wrap gap-2">
+                                          {pronunciationFeedback.wordAnalysis.weakWords.map((word, index) => (
+                                            <span key={index} className="bg-red-100 text-red-800 px-4 py-2 rounded-lg font-bold">
+                                              {word.text} ({word.confidence}%)
+                                            </span>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+
+                                {/* Improvement Suggestions */}
+                                {pronunciationFeedback.improvementSuggestions && pronunciationFeedback.improvementSuggestions.length > 0 && (
+                                  <div className="bg-blue-50 rounded-xl p-6 border border-blue-200">
+                                    <div className="flex items-center gap-2 mb-4">
+                                      <Lightbulb className="w-5 h-5 text-blue-600" />
+                                      <span className="font-bold text-blue-700">Gợi ý cải thiện</span>
                                     </div>
-                                  </details>
-                                )} */}
+                                    <div className="space-y-3">
+                                      {pronunciationFeedback.improvementSuggestions.map((suggestion, index) => (
+                                        <div key={index} className="flex items-start gap-3">
+                                          <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
+                                          <p className="text-blue-700 font-medium">{suggestion}</p>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
                               </div>
-                            ) : null}
+                            )}
                           </div>
                         )}
                       </div>
                     </div>
                   )}
-
-                  {/* Action Buttons */}
-                  <div className="flex items-center justify-center gap-3">
-                    {!showResult ? (
-                      <button
-                        onClick={checkAnswer}
-                        className="bg-gradient-to-r from-purple-500 to-pink-600 text-white px-6 py-3 rounded-xl hover:from-purple-600 hover:to-pink-700 transition-all duration-300 font-semibold shadow-lg hover:shadow-xl"
-                      >
-                        Kiểm tra
-                      </button>
-                    ) : (
-                      <button
-                        onClick={nextQuestion}
-                        className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-6 py-3 rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all duration-300 font-semibold shadow-lg hover:shadow-xl"
-                      >
-                        Câu tiếp theo
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Removed translate post demo */}
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* Quiz Controls */}
-            {quizStarted && (
-              <div className="flex items-center justify-center gap-3">
-                <button
-                  onClick={resetQuiz}
-                  className="flex items-center gap-2 bg-gray-500 text-white px-4 py-2 rounded-xl hover:bg-gray-600 transition-all duration-300 shadow-lg hover:shadow-xl"
-                >
-                  <RotateCcw className="w-4 h-4" />
-                  <span className="text-sm font-semibold">Làm lại</span>
-                </button>
-              </div>
-            )}
-          </div>
-        )}
+              {/* Quiz Controls */}
+              {quizStarted && (
+                <div className="flex justify-center">
+                  <button
+                    onClick={resetQuiz}
+                    className="flex items-center gap-3 bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-xl font-bold transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105"
+                  >
+                    <RotateCcw className="w-5 h-5" />
+                    <span>Làm lại từ đầu</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Notification */}
+      {/* Modern Notification */}
       {notification && (
-        <div className="fixed top-4 right-4 z-50 max-w-sm">
-          <div
-            className={`flex items-center gap-3 p-4 rounded-xl shadow-2xl border-l-4 transform transition-all duration-300 ease-out
-              ${notification.type === "success" 
-                ? "bg-white border-l-green-500 text-green-700 shadow-green-100" 
-                : notification.type === "error" 
-                ? "bg-white border-l-red-500 text-red-700 shadow-red-100" 
-                : "bg-white border-l-blue-500 text-blue-700 shadow-blue-100"}`}
-          >
-            {/* Icon */}
-            <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center
-              ${notification.type === "success" 
+        <div className="fixed top-6 right-6 z-50 max-w-sm">
+          <div className={`flex items-center gap-4 p-6 rounded-2xl shadow-2xl backdrop-blur-xl border transform transition-all duration-500 ease-out ${
+            notification.type === "success" 
+              ? "bg-green-50/90 border-green-200 text-green-700" 
+              : notification.type === "error" 
+              ? "bg-red-50/90 border-red-200 text-red-700" 
+              : "bg-blue-50/90 border-blue-200 text-blue-700"
+          }`}>
+            <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${
+              notification.type === "success" 
                 ? "bg-green-100 text-green-600" 
                 : notification.type === "error" 
                 ? "bg-red-100 text-red-600" 
-                : "bg-blue-100 text-blue-600"}`}
-            >
+                : "bg-blue-100 text-blue-600"
+            }`}>
               {notification.type === "success" ? (
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                </svg>
+                <CheckCircle className="w-5 h-5" />
               ) : notification.type === "error" ? (
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                </svg>
+                <XCircle className="w-5 h-5" />
               ) : (
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                </svg>
+                <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
               )}
             </div>
-            
-            {/* Content */}
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium leading-5">
+            <div className="flex-1">
+              <p className="font-semibold text-sm leading-6">
                 {notification.message}
               </p>
             </div>
-            
-            {/* Close button */}
             <button
               onClick={() => setNotification(null)}
-              className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center transition-colors duration-200
-                ${notification.type === "success" 
-                  ? "hover:bg-green-100 text-green-600" 
-                  : notification.type === "error" 
-                  ? "hover:bg-red-100 text-red-600" 
-                  : "hover:bg-blue-100 text-blue-600"}`}
+              className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-colors duration-200 hover:bg-white/50`}
             >
-              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-              </svg>
+              <XCircle className="w-4 h-4" />
             </button>
           </div>
         </div>
