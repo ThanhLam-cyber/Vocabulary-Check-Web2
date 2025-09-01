@@ -7,7 +7,6 @@ const fs = require('fs');
 const path = require('path');
 const admin = require('firebase-admin');
 const fetch = require('node-fetch');
-const FormData = require('form-data');
 const { AssemblyAI } = require('assemblyai');
 require('dotenv').config(); // Thêm dòng này để load biến môi trường từ file .env
 
