@@ -827,7 +827,15 @@ export default function CheckPage() {
                       <div className="text-center space-y-6">
                         {/* Section Header */}
                         <div className="flex items-center justify-center gap-3 mb-8">
-                          <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-full flex items-center justify-center shadow-lg">
+                          <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-full flex items-center justify-center shadow-lg cursor-pointer hover:scale-110 transition-all duration-300" onClick={() => {
+                            if ('speechSynthesis' in window) {
+                              const utterance = new SpeechSynthesisUtterance(currentQuestion.answer);
+                              utterance.lang = 'en-US';
+                              utterance.rate = 0.8;
+                              utterance.pitch = 1;
+                              speechSynthesis.speak(utterance);
+                            }
+                          }}>
                             <Mic className="w-6 h-6 text-white" />
                           </div>
                           <h3 className="text-2xl font-bold text-gray-800">Luyện phát âm</h3>
@@ -1038,42 +1046,7 @@ export default function CheckPage() {
                                   </p>
                                 </div>
 
-                                {/* Word Analysis */}
-                                {pronunciationFeedback.wordAnalysis && (
-                                  <div className="space-y-4">
-                                    {pronunciationFeedback.wordAnalysis.strongWords && pronunciationFeedback.wordAnalysis.strongWords.length > 0 && (
-                                      <div>
-                                        <div className="flex items-center gap-2 mb-3">
-                                          <CheckCircle className="w-5 h-5 text-green-600" />
-                                          <span className="font-bold text-green-700">Phát âm tốt</span>
-                                        </div>
-                                        <div className="flex flex-wrap gap-2">
-                                          {pronunciationFeedback.wordAnalysis.strongWords.map((word, index) => (
-                                            <span key={index} className="bg-green-100 text-green-800 px-4 py-2 rounded-lg font-bold">
-                                              {word.text} ({word.confidence}%)
-                                            </span>
-                                          ))}
-                                        </div>
-                                      </div>
-                                    )}
-                                    
-                                    {pronunciationFeedback.wordAnalysis.weakWords && pronunciationFeedback.wordAnalysis.weakWords.length > 0 && (
-                                      <div>
-                                        <div className="flex items-center gap-2 mb-3">
-                                          <XCircle className="w-5 h-5 text-red-600" />
-                                          <span className="font-bold text-red-700">Cần cải thiện</span>
-                                        </div>
-                                        <div className="flex flex-wrap gap-2">
-                                          {pronunciationFeedback.wordAnalysis.weakWords.map((word, index) => (
-                                            <span key={index} className="bg-red-100 text-red-800 px-4 py-2 rounded-lg font-bold">
-                                              {word.text} ({word.confidence}%)
-                                            </span>
-                                          ))}
-                                        </div>
-                                      </div>
-                                    )}
-                                  </div>
-                                )}
+                               
 
                                 {/* Improvement Suggestions */}
                                 {pronunciationFeedback.improvementSuggestions && pronunciationFeedback.improvementSuggestions.length > 0 && (
