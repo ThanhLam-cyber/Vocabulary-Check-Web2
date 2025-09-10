@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import { useNavigate } from "react-router-dom"
 import { ArrowLeft, CheckCircle, XCircle, RotateCcw, Play, Trophy, BookOpen, Mic, MicOff, Volume2, RefreshCw, Lightbulb, Star } from "lucide-react"
 import { collection, getDocs } from "firebase/firestore"
@@ -21,21 +21,27 @@ export default function CheckPage() {
   const [recordingFeedback, setRecordingFeedback] = useState(null)
   const [rapidAsrText, setRapidAsrText] = useState("")
   const [translatePostResult, setTranslatePostResult] = useState(null)
-  const [microphonePermission, setMicrophonePermission] = useState('unknown') // 'unknown', 'granted', 'denied', 'prompt'
-  const [realTimeText, setRealTimeText] = useState("") // Text hiển thị khi đang ghi âm
-  const [isTranscribing, setIsTranscribing] = useState(false) // Trạng thái đang transcribe
-  const [pronunciationFeedback, setPronunciationFeedback] = useState(null) // Phản hồi phân tích phát âm
-  const [isAnalyzing, setIsAnalyzing] = useState(false) // Trạng thái đang phân tích
-  const [practiceSentence, setPracticeSentence] = useState(null) // Đoạn văn luyện tập
-  const [isGeneratingSentence, setIsGeneratingSentence] = useState(false) // Trạng thái đang tạo đoạn văn
+  const [microphonePermission, setMicrophonePermission] = useState('unknown')
+  const [realTimeText, setRealTimeText] = useState("")
+  const [isTranscribing, setIsTranscribing] = useState(false)
+  const [pronunciationFeedback, setPronunciationFeedback] = useState(null)
+  const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [practiceSentence, setPracticeSentence] = useState(null)
+  const [isGeneratingSentence, setIsGeneratingSentence] = useState(false)
+  
+  // Track used vocabulary to avoid repetition
+  const [usedVocabIds, setUsedVocabIds] = useState(new Set())
+  const [availableVocabQueue, setAvailableVocabQueue] = useState([])
+  
   const mediaRecorderRef = useRef(null)
   const audioChunksRef = useRef([])
-  const transcriptionIntervalRef = useRef(null) // Interval để gửi audio chunks định kỳ
-  const recognitionRef = useRef(null) // Web Speech API recognition instance
+  const transcriptionIntervalRef = useRef(null)
+  const recognitionRef = useRef(null)
+  const notificationTimeoutRef = useRef(null)
   const navigate = useNavigate()
 
-  // Simple local assessment if backend fails or as a complement to ASR text
-  const computeLocalAssessment = (recognized, expected) => {
+  // Memoized computation for local assessment
+  const computeLocalAssessment = useCallback((recognized, expected) => {
     const rec = (recognized || '').toLowerCase().trim()
     const exp = (expected || '').toLowerCase().trim()
     if (!rec) {
@@ -50,10 +56,10 @@ export default function CheckPage() {
     const lenDiff = Math.abs(rec.length - exp.length)
     const score = Math.max(20, 100 - lenDiff * 10)
     return { score, feedback: 'Phát âm cần cải thiện. Hãy luyện tập thêm.' }
-  }
+  }, [])
 
   // Fetch vocabulary from Firebase
-  const fetchVocabList = async () => {
+  const fetchVocabList = useCallback(async () => {
     try {
       setLoading(true)
       const vocabCollectionRef = collection(db, "vocabulary")
@@ -66,7 +72,11 @@ export default function CheckPage() {
       
       setVocabList(vocabData)
       
-      if (vocabData.length === 0) {
+      // Initialize available vocab queue with shuffled array
+      if (vocabData.length > 0) {
+        const shuffled = [...vocabData].sort(() => Math.random() - 0.5)
+        setAvailableVocabQueue(shuffled)
+      } else {
         setNotification({ 
           type: "error", 
           message: "Không có từ vựng nào để kiểm tra. Hãy thêm từ vựng trước!" 
@@ -81,29 +91,49 @@ export default function CheckPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
-  // Generate random question
-  const generateQuestion = () => {
-    if (vocabList.length === 0) return
-
-    const randomIndex = Math.floor(Math.random() * vocabList.length)
-    const randomVocab = vocabList[randomIndex]
-    
-    // Only Vietnamese to English questions
-    const question = {
-      vocab: randomVocab,
-      question: randomVocab.vietnamese,
-      answer: randomVocab.english,
-      type: "vietnamese-to-english",
-      hint: randomVocab.example || null
+  // Generate question without repetition
+  const generateQuestion = useCallback(() => {
+    if (availableVocabQueue.length === 0) {
+      // All vocab used, reset and reshuffle
+      if (vocabList.length === 0) return
+      
+      const shuffled = [...vocabList].sort(() => Math.random() - 0.5)
+      setAvailableVocabQueue(shuffled.slice(1)) // Take all except first
+      setUsedVocabIds(new Set([shuffled[0]._id]))
+      
+      const randomVocab = shuffled[0]
+      const question = {
+        vocab: randomVocab,
+        question: randomVocab.vietnamese,
+        answer: randomVocab.english,
+        type: "vietnamese-to-english",
+        hint: randomVocab.example || null
+      }
+      
+      setCurrentQuestion(question)
+    } else {
+      // Get next vocab from queue
+      const nextVocab = availableVocabQueue[0]
+      setAvailableVocabQueue(prev => prev.slice(1))
+      setUsedVocabIds(prev => new Set([...prev, nextVocab._id]))
+      
+      const question = {
+        vocab: nextVocab,
+        question: nextVocab.vietnamese,
+        answer: nextVocab.english,
+        type: "vietnamese-to-english",
+        hint: nextVocab.example || null
+      }
+      
+      setCurrentQuestion(question)
     }
     
-    setCurrentQuestion(question)
+    // Reset states for new question
     setUserAnswer("")
     setShowResult(false)
     setIsCorrect(false)
-    // Reset recording states for new question
     setRecording(false)
     setAudioUrl(null)
     setRecordingFeedback(null)
@@ -113,10 +143,11 @@ export default function CheckPage() {
     setTranslatePostResult(null)
     setPronunciationFeedback(null)
     setIsAnalyzing(false)
-  }
+    setPracticeSentence(null)
+  }, [availableVocabQueue, vocabList])
 
   // Start quiz
-  const startQuiz = () => {
+  const startQuiz = useCallback(() => {
     if (vocabList.length === 0) {
       setNotification({ 
         type: "error", 
@@ -128,11 +159,17 @@ export default function CheckPage() {
     setQuizStarted(true)
     setScore(0)
     setTotalQuestions(0)
+    setUsedVocabIds(new Set())
+    
+    // Shuffle and set queue
+    const shuffled = [...vocabList].sort(() => Math.random() - 0.5)
+    setAvailableVocabQueue(shuffled)
+    
     generateQuestion()
-  }
+  }, [vocabList, generateQuestion])
 
-  // Check answer
-  const checkAnswer = () => {
+  // Check answer with memoized comparison
+  const checkAnswer = useCallback(() => {
     if (!currentQuestion || !userAnswer.trim()) {
       setNotification({ 
         type: "error", 
@@ -141,19 +178,15 @@ export default function CheckPage() {
       return
     }
 
-    // Clean and normalize both strings for comparison
     const cleanUserAnswer = userAnswer.trim().toLowerCase().replace(/\s+/g, ' ')
     const cleanCorrectAnswer = currentQuestion.answer.trim().toLowerCase().replace(/\s+/g, ' ')
     
-    // More flexible comparison - check for exact match first, then check if user answer contains correct answer
     let correct = cleanUserAnswer === cleanCorrectAnswer
     
-    // If exact match fails, try partial match (for cases where user adds extra words)
     if (!correct && cleanUserAnswer.includes(cleanCorrectAnswer)) {
       correct = true
     }
     
-    // If still not correct, try the reverse (correct answer contains user answer)
     if (!correct && cleanCorrectAnswer.includes(cleanUserAnswer) && cleanUserAnswer.length > 2) {
       correct = true
     }
@@ -166,15 +199,15 @@ export default function CheckPage() {
     }
     
     setTotalQuestions(prev => prev + 1)
-  }
+  }, [currentQuestion, userAnswer])
 
   // Next question
-  const nextQuestion = () => {
+  const nextQuestion = useCallback(() => {
     generateQuestion()
-  }
+  }, [generateQuestion])
 
   // Reset quiz
-  const resetQuiz = () => {
+  const resetQuiz = useCallback(() => {
     setQuizStarted(false)
     setScore(0)
     setTotalQuestions(0)
@@ -191,17 +224,19 @@ export default function CheckPage() {
     setTranslatePostResult(null)
     setPronunciationFeedback(null)
     setIsAnalyzing(false)
-  }
+    setPracticeSentence(null)
+    setUsedVocabIds(new Set())
+    setAvailableVocabQueue([])
+  }, [])
 
   // Check microphone permission status
-  const checkMicrophonePermission = async () => {
+  const checkMicrophonePermission = useCallback(async () => {
     try {
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         setMicrophonePermission('denied')
         return false
       }
 
-      // Check if we have permission
       const permission = await navigator.permissions.query({ name: 'microphone' })
       setMicrophonePermission(permission.state)
       
@@ -214,18 +249,17 @@ export default function CheckPage() {
         })
         return false
       } else {
-        // Permission state is 'prompt'
-        return true // Will prompt user when getUserMedia is called
+        return true
       }
     } catch (error) {
       console.error("Lỗi kiểm tra quyền microphone:", error)
       setMicrophonePermission('unknown')
-      return true // Try anyway
+      return true
     }
-  }
+  }, [])
 
   // Retry microphone permission request
-  const retryMicrophonePermission = async () => {
+  const retryMicrophonePermission = useCallback(async () => {
     setMicrophonePermission('unknown')
     const hasPermission = await checkMicrophonePermission()
     if (hasPermission) {
@@ -234,16 +268,16 @@ export default function CheckPage() {
         message: "Đã kiểm tra lại quyền microphone. Thử ghi âm để cấp quyền." 
       })
     }
-  }
+  }, [checkMicrophonePermission])
 
   // Send audio chunk for real-time transcription
-  const sendAudioChunkForTranscription = async (audioBlob) => {
+  const sendAudioChunkForTranscription = useCallback(async (audioBlob) => {
     try {
       setIsTranscribing(true)
       const formData = new FormData()
       formData.append("audio", audioBlob, "chunk.webm")
 
-              const response = await fetch(API_ENDPOINTS.realtimeTranscribe, {
+      const response = await fetch(API_ENDPOINTS.realtimeTranscribe, {
         method: "POST",
         body: formData,
       })
@@ -258,11 +292,8 @@ export default function CheckPage() {
           if (!prevClean) return nextClean
           const lowerPrev = prevClean.toLowerCase()
           const lowerNext = nextClean.toLowerCase()
-          // If new text is already fully contained, skip
           if (lowerPrev.includes(lowerNext)) return prevClean
-          // If prev is contained in new, replace with new
           if (lowerNext.includes(lowerPrev)) return nextClean
-          // Merge with suffix/prefix overlap to avoid duplication
           const maxOverlap = Math.min(prevClean.length, nextClean.length)
           let merged = null
           for (let i = maxOverlap; i > 0; i--) {
@@ -279,22 +310,19 @@ export default function CheckPage() {
     } finally {
       setIsTranscribing(false)
     }
-  }
+  }, [])
 
   // Recording functions
-  const startRecording = async () => {
+  const startRecording = useCallback(async () => {
     try {
-      // Check permission first
       const hasPermission = await checkMicrophonePermission()
       if (!hasPermission) {
         return
       }
 
-      // Reset real-time text
       setRealTimeText("")
       setIsTranscribing(false)
 
-      // Request microphone access
       const stream = await navigator.mediaDevices.getUserMedia({ 
         audio: {
           echoCancellation: true,
@@ -308,7 +336,6 @@ export default function CheckPage() {
       })
       audioChunksRef.current = []
 
-      // Detect native in-browser speech recognition support (Web Speech API)
       const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition
       const useNativeASR = !!SpeechRecognitionCtor
 
@@ -323,29 +350,23 @@ export default function CheckPage() {
         const url = URL.createObjectURL(audioBlob)
         setAudioUrl(url)
 
-        // Stop all tracks to release microphone
         stream.getTracks().forEach(track => track.stop())
 
-        // Clear transcription interval
         if (transcriptionIntervalRef.current) {
           clearInterval(transcriptionIntervalRef.current)
           transcriptionIntervalRef.current = null
         }
 
-        // Stop Web Speech recognition if running
         if (recognitionRef.current) {
           try {
             recognitionRef.current.onend = null
             recognitionRef.current.stop()
-          } catch (err) {
-            // no-op
-          }
+          } catch (err) {}
           recognitionRef.current = null
         }
 
         setIsTranscribing(false)
 
-        // Send audio for pronunciation assessment
         if (currentQuestion && currentQuestion.answer) {
           sendAudioForAssessment(audioBlob)
         }
@@ -425,9 +446,9 @@ export default function CheckPage() {
         })
       }
     }
-  }
+  }, [checkMicrophonePermission, currentQuestion, recording])
 
-  const stopRecording = () => {
+  const stopRecording = useCallback(() => {
     if (mediaRecorderRef.current && recording) {
       mediaRecorderRef.current.stop()
       setRecording(false)
@@ -442,17 +463,15 @@ export default function CheckPage() {
         try {
           recognitionRef.current.onend = null
           recognitionRef.current.stop()
-        } catch (err) {
-          // no-op
-        }
+        } catch (err) {}
         recognitionRef.current = null
       }
       setIsTranscribing(false)
     }
-  }
+  }, [recording])
 
   // Send audio for pronunciation assessment
-  const sendAudioForAssessment = async (audioBlob) => {
+  const sendAudioForAssessment = useCallback(async (audioBlob) => {
     try {
       setIsAnalyzing(true)
       setNotification({ type: "info", message: "Đang phân tích phát âm..." })
@@ -518,10 +537,10 @@ export default function CheckPage() {
     } finally {
       setIsAnalyzing(false)
     }
-  }
+  }, [currentQuestion, realTimeText, computeLocalAssessment])
 
   // Generate practice sentence with OpenAI
-  const generatePracticeSentence = async (word) => {
+  const generatePracticeSentence = useCallback(async (word) => {
     try {
       setIsGeneratingSentence(true)
       setNotification({ type: "info", message: "Đang tạo đoạn văn luyện tập..." })
@@ -557,29 +576,36 @@ export default function CheckPage() {
     } finally {
       setIsGeneratingSentence(false)
     }
-  }
+  }, [])
 
-  // Auto-hide notification
+  // Optimized notification handler
   useEffect(() => {
     if (notification) {
-      const timer = setTimeout(() => {
+      if (notificationTimeoutRef.current) {
+        clearTimeout(notificationTimeoutRef.current)
+      }
+      notificationTimeoutRef.current = setTimeout(() => {
         setNotification(null)
       }, 4000)
-      return () => clearTimeout(timer)
+    }
+    return () => {
+      if (notificationTimeoutRef.current) {
+        clearTimeout(notificationTimeoutRef.current)
+      }
     }
   }, [notification])
 
   // Load vocabulary on component mount
   useEffect(() => {
     fetchVocabList()
-  }, [])
+  }, [fetchVocabList])
 
   // Check microphone permission on component mount
   useEffect(() => {
     checkMicrophonePermission()
-  }, [])
+  }, [checkMicrophonePermission])
 
-  // Cleanup transcription interval on unmount
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (transcriptionIntervalRef.current) {
@@ -592,8 +618,25 @@ export default function CheckPage() {
         } catch (_) {}
         recognitionRef.current = null
       }
+      if (notificationTimeoutRef.current) {
+        clearTimeout(notificationTimeoutRef.current)
+      }
+      // Clean up audio URLs
+      if (audioUrl) {
+        URL.revokeObjectURL(audioUrl)
+      }
     }
-  }, [])
+  }, [audioUrl])
+
+  // Memoized computed values
+  const remainingVocab = useMemo(() => {
+    return vocabList.length - usedVocabIds.size
+  }, [vocabList.length, usedVocabIds.size])
+
+  const progressPercentage = useMemo(() => {
+    if (vocabList.length === 0) return 0
+    return Math.round((usedVocabIds.size / vocabList.length) * 100)
+  }, [vocabList.length, usedVocabIds.size])
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
@@ -624,18 +667,30 @@ export default function CheckPage() {
                       Kiểm tra từ vựng
                     </h1>
                     <p className="text-sm text-gray-500">
-                      {quizStarted ? `Điểm: ${score}/${totalQuestions}` : `${vocabList.length} từ có sẵn`}
+                      {quizStarted ? `Còn ${remainingVocab}/${vocabList.length} từ chưa kiểm tra` : `${vocabList.length} từ có sẵn`}
                     </p>
                   </div>
                 </div>
               </div>
 
-              {/* Score Display */}
+              {/* Score Display with Progress */}
               {quizStarted && (
-                <div className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white px-6 py-2 rounded-full shadow-lg">
-                  <div className="flex items-center gap-2">
-                    <Star className="w-4 h-4" />
-                    <span className="font-bold">{score}/{totalQuestions}</span>
+                <div className="flex items-center gap-4">
+                  <div className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white px-6 py-2 rounded-full shadow-lg">
+                    <div className="flex items-center gap-2">
+                      <Star className="w-4 h-4" />
+                      <span className="font-bold">{score}/{totalQuestions}</span>
+                    </div>
+                  </div>
+                  {/* Progress indicator */}
+                  <div className="hidden sm:block">
+                    <div className="text-xs text-gray-500 mb-1">Tiến độ: {progressPercentage}%</div>
+                    <div className="w-32 h-2 bg-gray-200 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-gradient-to-r from-indigo-500 to-purple-600 transition-all duration-300"
+                        style={{ width: `${progressPercentage}%` }}
+                      />
+                    </div>
                   </div>
                 </div>
               )}
@@ -1045,8 +1100,6 @@ export default function CheckPage() {
                                     {pronunciationFeedback.feedback}
                                   </p>
                                 </div>
-
-                               
 
                                 {/* Improvement Suggestions */}
                                 {pronunciationFeedback.improvementSuggestions && pronunciationFeedback.improvementSuggestions.length > 0 && (
