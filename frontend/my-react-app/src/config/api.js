@@ -6,7 +6,7 @@ const API_CONFIG = {
   },
   // Production (Render)
   production: {
-    baseURL: 'https://vocabulary-check-web.onrender.com',
+    baseURL: 'https://vocabulary-check-web2.onrender.com',
   }
 };
 
