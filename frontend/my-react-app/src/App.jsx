@@ -11,6 +11,8 @@ export default function App() {
     example: "",
   })
   const [vocabList, setVocabList] = useState([])
+  const [lastEdited, setLastEdited] = useState(null) // "en" hoặc "vi"
+
   const [notification, setNotification] = useState(null)
   const navigate = useNavigate()
 
@@ -38,22 +40,60 @@ export default function App() {
       console.error("Lỗi dịch:", error)
     }
   }
+  const translateTextReverse = async (text) => {
+  if (!text.trim()) {
+    setVocabulary((prev) => ({ ...prev, english: "" }))
+    return
+  }
+  try {
+    const res = await fetch(
+      `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=vi|en`
+    )
+    const data = await res.json()
+    const translated = data?.responseData?.translatedText || ""
+    setVocabulary((prev) => ({
+      ...prev,
+      english: capitalizeFirstLetter(translated),
+    }))
+  } catch (error) {
+    console.error("Lỗi dịch ngược:", error)
+  }
+}
 
-  // Dùng debounce khi gõ tiếng Anh
-  useEffect(() => {
+
+// Khi sửa tiếng Anh thì chỉ dịch sang Việt nếu lastEdited == "en"
+useEffect(() => {
+  if (lastEdited === "en") {
     const delay = setTimeout(() => {
       translateText(vocabulary.english)
     }, 350)
     return () => clearTimeout(delay)
-  }, [vocabulary.english])
-
-  const handleChange = (e) => {
-    let value = e.target.value
-    if (e.target.name === "vietnamese") {
-      value = capitalizeFirstLetter(value)
-    }
-    setVocabulary({ ...vocabulary, [e.target.name]: value })
   }
+}, [vocabulary.english, lastEdited])
+
+// Khi sửa tiếng Việt thì chỉ dịch sang Anh nếu lastEdited == "vi"
+useEffect(() => {
+  if (lastEdited === "vi") {
+    const delay = setTimeout(() => {
+      translateTextReverse(vocabulary.vietnamese)
+    }, 350)
+    return () => clearTimeout(delay)
+  }
+}, [vocabulary.vietnamese, lastEdited])
+
+
+
+ const handleChange = (e) => {
+  const { name, value } = e.target
+
+  setLastEdited(name === "english" ? "en" : name === "vietnamese" ? "vi" : lastEdited)
+
+  let newValue = value
+  if (name === "vietnamese") newValue = capitalizeFirstLetter(newValue)
+
+  setVocabulary((prev) => ({ ...prev, [name]: newValue }))
+}
+
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -69,8 +109,8 @@ export default function App() {
     try {
       // Thêm vào Firebase thay vì backend
       const docRef = await addDoc(collection(db, "vocabulary"), {
-        english: vocabulary.english.trim(),
         vietnamese: vocabulary.vietnamese.trim(),
+        english: vocabulary.english.trim(),
         example: vocabulary.example.trim(),
         createdAt: new Date()
       })
@@ -123,26 +163,6 @@ export default function App() {
         <form onSubmit={handleSubmit} className="form-content space-y-4 sm:space-y-4 md:space-y-6">
           {/* Form fields - Responsive grid layout */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 md:gap-6">
-            {/* Ô tiếng Anh */}
-            <div className="group md:col-span-1">
-              <label className="block text-sm sm:text-sm md:text-base font-semibold text-gray-700 mb-2 sm:mb-2 md:mb-3 flex items-center gap-2 sm:gap-2">
-                <span className="text-sm sm:text-base md:text-lg flex items-center">🇬🇧</span>
-                <span className="truncate">Nghĩa tiếng Anh</span>
-              </label>
-              <div className="relative">
-                <input
-                  type="text"
-                  name="english"
-                  value={vocabulary.english}
-                  onChange={handleChange}
-                  placeholder="Nhập nghĩa tiếng Anh"
-                  className="w-full p-3 sm:p-3 md:p-4 pl-10 sm:pl-10 md:pl-12 text-sm sm:text-sm md:text-base border-2 border-gray-200 rounded-xl sm:rounded-xl md:rounded-2xl focus:ring-2 sm:focus:ring-4 focus:ring-emerald-100 focus:border-emerald-400 transition-all duration-300 bg-white/70 backdrop-blur-sm text-gray-800 placeholder-gray-400 group-hover:border-gray-300"
-                />
-                <div className="absolute left-3 sm:left-3 md:left-4 top-1/4 transform -translate-y-1/2 w-5 h-5 sm:w-5 sm:h-5 md:w-6 md:h-6 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-full flex items-center justify-center">
-                  <span className="text-white text-[10px] sm:text-xs md:text-sm font-bold flex items-center">EN</span>
-                </div>
-              </div>
-            </div>
 
             {/* Ô tiếng Việt */}
             <div className="group md:col-span-1">
@@ -161,6 +181,27 @@ export default function App() {
                 />
                 <div className="absolute left-3 sm:left-3 md:left-4 top-1/4 transform -translate-y-1/2 w-5 h-5 sm:w-5 sm:h-5 md:w-6 md:h-6 bg-gradient-to-br from-teal-400 to-teal-600 rounded-full flex items-center justify-center">
                   <span className="text-white text-[10px] sm:text-xs md:text-sm font-bold flex items-center">VI</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Ô tiếng Anh */}
+            <div className="group md:col-span-1">
+              <label className="block text-sm sm:text-sm md:text-base font-semibold text-gray-700 mb-2 sm:mb-2 md:mb-3 flex items-center gap-2 sm:gap-2">
+                <span className="text-sm sm:text-base md:text-lg flex items-center">🇬🇧</span>
+                <span className="truncate">Nghĩa tiếng Anh</span>
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  name="english"
+                  value={vocabulary.english}
+                  onChange={handleChange}
+                  placeholder="Nhập nghĩa tiếng Anh"
+                  className="w-full p-3 sm:p-3 md:p-4 pl-10 sm:pl-10 md:pl-12 text-sm sm:text-sm md:text-base border-2 border-gray-200 rounded-xl sm:rounded-xl md:rounded-2xl focus:ring-2 sm:focus:ring-4 focus:ring-emerald-100 focus:border-emerald-400 transition-all duration-300 bg-white/70 backdrop-blur-sm text-gray-800 placeholder-gray-400 group-hover:border-gray-300"
+                />
+                <div className="absolute left-3 sm:left-3 md:left-4 top-1/4 transform -translate-y-1/2 w-5 h-5 sm:w-5 sm:h-5 md:w-6 md:h-6 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-full flex items-center justify-center">
+                  <span className="text-white text-[10px] sm:text-xs md:text-sm font-bold flex items-center">EN</span>
                 </div>
               </div>
             </div>

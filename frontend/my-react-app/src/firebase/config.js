@@ -5,15 +5,15 @@ import { getFirestore } from 'firebase/firestore'
 
 // Firebase config for vocabulary-check-51e3e project
 const firebaseConfig = {
-  apiKey: "AIzaSyYourApiKey", // Cần thay thế bằng API key thực tế
-  authDomain: "vocabulary-check-51e3e.firebaseapp.com",
-  projectId: "vocabulary-check-51e3e",
-  storageBucket: "vocabulary-check-51e3e.appspot.com",
-  messagingSenderId: "your-messaging-sender-id", // Cần thay thế
-  appId: "your-app-id", // Cần thay thế
-  databaseURL: "https://vocabulary-check-51e3e-default-rtdb.asia-southeast1.firebasedatabase.app/"
-}
-
+  apiKey: "AIzaSyCj_Qb_vMb6iw5v945HbKJ_W5vaS1ZdkuI",
+  authDomain: "vocabulary-check-web2.firebaseapp.com",
+  databaseURL: "https://vocabulary-check-web2-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "vocabulary-check-web2",
+  storageBucket: "vocabulary-check-web2.firebasestorage.app",
+  messagingSenderId: "55712887959",
+  appId: "1:55712887959:web:f6787b3d0f8790bce065d2",
+  measurementId: "G-33SH8F3RLM"
+};
 // Initialize Firebase with error handling
 let app
 let auth
