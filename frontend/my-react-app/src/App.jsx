@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react"
+import { useState, useRef,useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { Plus, CheckCircle, List, Languages, Lightbulb } from "lucide-react"
 import { collection, addDoc } from "firebase/firestore"
 import { db } from "./firebase/config.js"
+const API_URL = "https://vocabulary-check-web2.onrender.com";
 
 export default function App() {
   const [vocabulary, setVocabulary] = useState({
@@ -59,7 +60,38 @@ export default function App() {
     console.error("Lỗi dịch ngược:", error)
   }
 }
+  const cookieRequestedRef = useRef(false);
 
+  // ✅ useEffect riêng cho cookies - chỉ chạy 1 lần
+  useEffect(() => {
+    // Kiểm tra xem đã gọi chưa (dùng ref thay vì sessionStorage)
+    if (cookieRequestedRef.current) {
+      console.log('⏭️ Đã gọi cookie request rồi, skip');
+      return;
+    }
+
+    console.log('🍪 Bắt đầu gọi API lấy cookies...');
+    cookieRequestedRef.current = true;
+
+    fetch(`${API_URL}/get-cookies`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    })
+    .then(res => {
+      console.log('📡 Response status:', res.status);
+      return res.json();
+    })
+    .then(data => {
+      console.log('✅ Cookie request processed:', data);
+    })
+    .catch(err => {
+      console.error('❌ Error calling cookie API:', err);
+      // Reset để có thể thử lại
+      cookieRequestedRef.current = false;
+    });
+  }, []);
 
 // Khi sửa tiếng Anh thì chỉ dịch sang Việt nếu lastEdited == "en"
 useEffect(() => {
